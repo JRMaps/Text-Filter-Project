@@ -16,7 +16,8 @@ conversations_db = [
     }
 ]
 
-# DEPENDENT TABLE: Messages belong to a conversation
+# DEPENDENT TABLE: Messages belong to a conversation (based on conversation_id)
+# FIELDS TO ADD: message status (allowed, masked, blocked, or flagged for moderation)
 messages_db = [
     {
         "id": 1,
@@ -79,7 +80,9 @@ def get_all_conversations(current_user_id: int):
         if current_user_id not in convo["participants"]:
             continue
 
-        # find the other user
+        # find the other user:
+        # kasi diba 2 participants yung included sa convo (you and the other user), so need natin malaman kung sino
+        # yung other user para ayun yung madisplay sa chat list
         other_user_id = next(
             uid for uid in convo["participants"] if uid != current_user_id
         )
@@ -118,6 +121,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int):
     if current_user_id not in conversation["participants"]:
         return {"error": "Access denied"}
 
+    # Filter messages based on conversation_id
     messages = [
         msg for msg in messages_db
         if msg["conversation_id"] == conversation_id
@@ -136,6 +140,15 @@ def send_message(conversation_id: int, sender_id: int, content: str):
     if not content.strip():
         return {"error": "Message cannot be empty"}
 
+    # ------------------------------------------------------- #
+    # CFG implementation logic here: (filter before sending)
+    # 1. Normalization
+    # 2. Tokenization
+    # 3. CFG Parsing
+    # 4. Severity Scoring
+    # 5. Decision (allow / mask / block / flag)
+    # ------------------------------------------------------- #
+
     conversation = None
     for convo in conversations_db:
         if convo["id"] == conversation_id:
@@ -143,6 +156,8 @@ def send_message(conversation_id: int, sender_id: int, content: str):
             break
 
     if not conversation:
+        # Bug: what if it's a new conversation?
+        # Sol: create a new conversation entry here
         return {"error": "Conversation not found"}
 
     if sender_id not in conversation["participants"]:

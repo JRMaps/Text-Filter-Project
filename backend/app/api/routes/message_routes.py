@@ -8,6 +8,7 @@ class MessageRequest(BaseModel):
     conversation_id: int = Field(..., gt=0, description="ID of the conversation (must be a positive integer)")
     content: str
 
+# To add on every route: authentication dependency to get current user ID
 @router.get("/conversations")
 def api_get_all_conversations():
     """API to get all conversations for the current user."""
