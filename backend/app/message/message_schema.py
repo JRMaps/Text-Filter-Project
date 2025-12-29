@@ -8,6 +8,11 @@ class MessageStatus(str, Enum):
     blocked = "blocked"
     flagged = "flagged"
 
+class DeliveryStatus(str, Enum):
+    sent = "sent"
+    delivered = "delivered"
+    read = "read"
+
 class MessageBase(BaseModel):
     content: str
 
@@ -21,6 +26,7 @@ class MessageRead(MessageBase):
     sender_id: int
     receiver_id: int
     status: MessageStatus
+    delivery_status: DeliveryStatus
     created_at: datetime
 
     class Config:
