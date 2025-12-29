@@ -8,7 +8,7 @@ from backend.app.core.dependencies import get_current_user
 router = APIRouter()
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/profile", response_model=UserRead)
 async def get_current_user_info(
     current_user: User = Depends(get_current_user)
 ):
