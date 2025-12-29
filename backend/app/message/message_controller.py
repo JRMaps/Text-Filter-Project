@@ -2,10 +2,10 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from backend.app.database.database import SessionLocal
-from backend.app.user.models.user_model import User
-from backend.app.message.models.messages_model import Message
-from backend.app.conversation.models.conversation_model import Conversation, conversation_participants
-from backend.app.message.schemas.message_schema import MessageRead, MessageStatus
+from backend.app.user.user_model import User
+from backend.app.message.messages_model import Message
+from backend.app.conversation.conversation_model import Conversation, conversation_participants
+from backend.app.message.message_schema import MessageRead, MessageStatus
 
 
 def get_db():

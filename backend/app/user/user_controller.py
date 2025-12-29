@@ -2,8 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_
 from typing import List
 from backend.app.database.database import SessionLocal
-from backend.app.user.models.user_model import User
-from backend.app.user.schemas.user_schema import UserRead
+from backend.app.user.user_model import User
+from backend.app.user.user_schema import UserRead
 
 
 def get_db():

@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from backend.app.message.schemas.message_schema import MessageRead
-from backend.app.user.schemas.user_schema import UserRead  # Corrected import
+from backend.app.message.message_schema import MessageRead
+from backend.app.user.user_schema import UserRead  # Corrected import
 
 class ConversationBase(BaseModel):
     participants: List[int]

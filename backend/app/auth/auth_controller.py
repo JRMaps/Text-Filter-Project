@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
 from backend.app.database.database import SessionLocal
-from backend.app.user.models.user_model import User
-from backend.app.user.schemas.user_schema import UserCreate, UserLogin
-from backend.app.auth.schemas.auth_schema import Token
-from backend.app.auth.utils.auth_utils import (
+from backend.app.user.user_model import User
+from backend.app.user.user_schema import UserCreate, UserLogin
+from backend.app.auth.auth_schema import Token
+from backend.app.auth.auth_utils import (
     verify_password,
     get_password_hash,
     create_access_token,

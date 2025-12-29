@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from backend.app.message.controllers.message_controller import send_message
-from backend.app.message.schemas.message_schema import MessageCreate, MessageRead
-from backend.app.user.models.user_model import User
+from backend.app.message.message_controller import send_message
+from backend.app.message.message_schema import MessageCreate, MessageRead
+from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
 
 router = APIRouter()
