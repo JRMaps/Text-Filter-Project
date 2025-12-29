@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Query, Depends
 from typing import List
-from backend.app.user.controllers.user_controller import search_user, view_user_profile
-from backend.app.user.schemas.user_schema import UserRead
-from backend.app.user.models.user_model import User
+from backend.app.user.user_controller import search_user, view_user_profile
+from backend.app.user.user_schema import UserRead
+from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
 
 router = APIRouter()

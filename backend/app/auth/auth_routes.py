@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from backend.app.auth.controllers.auth_controller import register_user, login_user
-from backend.app.user.schemas.user_schema import UserCreate, UserLogin
-from backend.app.auth.schemas.auth_schema import Token
+from backend.app.auth.auth_controller import register_user, login_user
+from backend.app.user.user_schema import UserCreate, UserLogin
+from backend.app.auth.auth_schema import Token
 
 router = APIRouter()
 

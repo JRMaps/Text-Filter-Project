@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from backend.app.message.schemas.message_schema import MessageRead
+from backend.app.message.message_schema import MessageRead
 
 # Incoming WebSocket Messages
 class WSMessageIn(BaseModel):

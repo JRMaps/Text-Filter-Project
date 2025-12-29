@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from typing import List
-from backend.app.conversation.controllers.conversation_controller import get_all_conversations, get_conversation_by_id
-from backend.app.conversation.schemas.conversation_schema import ConversationDashboardItem, ConversationWithMessages
-from backend.app.user.models.user_model import User
+from backend.app.conversation.conversation_controller import get_all_conversations, get_conversation_by_id
+from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
+from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
 
 router = APIRouter()

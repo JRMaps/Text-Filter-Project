@@ -2,12 +2,12 @@ from datetime import datetime
 from fastapi import HTTPException, status
 from typing import List
 from backend.app.database.database import SessionLocal
-from backend.app.user.models.user_model import User
-from backend.app.message.models.messages_model import Message
-from backend.app.conversation.models.conversation_model import Conversation, conversation_participants
-from backend.app.conversation.schemas.conversation_schema import ConversationDashboardItem, ConversationWithMessages
-from backend.app.message.schemas.message_schema import MessageRead, MessageStatus
-from backend.app.user.schemas.user_schema import UserRead
+from backend.app.user.user_model import User
+from backend.app.message.messages_model import Message
+from backend.app.conversation.conversation_model import Conversation, conversation_participants
+from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
+from backend.app.message.message_schema import MessageRead, MessageStatus
+from backend.app.user.user_schema import UserRead
 
 
 def get_db():

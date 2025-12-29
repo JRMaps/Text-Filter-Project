@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from backend.app.auth.utils.auth_utils import verify_token, get_user_by_email
-from backend.app.user.models.user_model import User
+from backend.app.auth.auth_utils import verify_token, get_user_by_email
+from backend.app.user.user_model import User
 
 # OAuth2 scheme for token extraction
 # Note: tokenUrl should be the full path to the login endpoint

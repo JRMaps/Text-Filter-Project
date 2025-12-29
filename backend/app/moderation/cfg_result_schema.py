@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List
-from backend.app.message.schemas.message_schema import MessageStatus
+from backend.app.message.message_schema import MessageStatus
 
 # CFG moderation result
 class CFGResult(BaseModel):

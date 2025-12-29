@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from backend.app.message.routes import message_routes
-from backend.app.auth.routes import auth_routes
-from backend.app.conversation.routes import conversation_routes
+from backend.app.message import message_routes
+from backend.app.auth import auth_routes
+from backend.app.conversation import conversation_routes
 from backend.app.database.database import create_tables
-from backend.app.user.routes import user_routes
+from backend.app.user import user_routes
 
 app = FastAPI()
 
