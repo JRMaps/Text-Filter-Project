@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from typing import List
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.message.messages_model import Message
+from backend.app.message.message_model import Message
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
 from backend.app.message.message_schema import MessageRead, MessageStatus
