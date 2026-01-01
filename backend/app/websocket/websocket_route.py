@@ -73,20 +73,20 @@ async def ws_chat(websocket: WebSocket):
                 # Send message using service
                 try:
                     message = send_message(
-                    sender_id=current_user.id,
+                        sender_id=current_user.id,
                         receiver_id=receiver_id,
                         content=content
-                )
+                    )
 
                     # Broadcast to conversation participants
                     participant_ids = [current_user.id, receiver_id]
-                await manager.send_to_conversation(
+                    await manager.send_to_conversation(
                         participant_ids=participant_ids,
                         payload={
-                        "type": "message:new",
-                        "payload": {
-                            "id": message.id,
-                            "conversation_id": message.conversation_id,
+                            "type": "message:new",
+                            "payload": {
+                                "id": message.id,
+                                "conversation_id": message.conversation_id,
                                 "sender_id": message.sender_id,
                                 "receiver_id": message.receiver_id,
                                 "content": message.content,
@@ -109,7 +109,6 @@ async def ws_chat(websocket: WebSocket):
                             }
                         }
                     )
-                    
                 except Exception as e:
                     await websocket.send_json({
                         "type": "error",
