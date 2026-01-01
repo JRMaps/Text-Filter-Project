@@ -4,6 +4,7 @@ from backend.app.auth import auth_routes
 from backend.app.conversation import conversation_routes
 from backend.app.database.database import create_tables
 from backend.app.user import user_routes
+from backend.app.websocket.websocket_route import ws_chat
 
 app = FastAPI()
 
@@ -22,3 +23,6 @@ app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(message_routes.router, prefix="/api/messages", tags=["messages"])
 app.include_router(conversation_routes.router, prefix="/api", tags=["conversations"])
 app.include_router(user_routes.router, prefix="/api/users", tags=["users"])
+
+# WebSocket route
+app.websocket("/ws")(ws_chat)
