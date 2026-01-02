@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Image, Text, View, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from "react-native";
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LoginRegisterScreen = () => {
+    const router = useRouter();
 
     return (
       <SafeAreaView style = {styles.container}>
@@ -14,11 +16,11 @@ const LoginRegisterScreen = () => {
         </View>
 
         {/*Buttons Section */}
-        <View  >
-          <TouchableOpacity style={styles.loginButton} onPress={() => console.log('Login Pressed')}>
+        <View>
+          <TouchableOpacity style={[styles.buttonBase, styles.loginButton]} onPress={() => router.push('./loginScreen')}>
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => console.log('Register Pressed')}>
+          <TouchableOpacity style={[styles.buttonBase, styles.registerButton]} onPress={() => console.log('Register Pressed')}>
             <Text style={styles.buttonText}>Register</Text>
           </TouchableOpacity>
         </View>
@@ -39,36 +41,28 @@ const styles = StyleSheet.create({
     height: 400,
     resizeMode: 'contain',
     alignSelf: 'center',
-    justifyContent: 'center',
     marginBottom: -50,
   },
-  loginButton: {
-    backgroundColor: '#0039a9',
+  buttonBase: {
     width: 250,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 10,
-    marginVertical: 8,
-    marginHorizontal: 15,
     borderRadius: 8,
+  },
+  loginButton: {
+    backgroundColor: '#0039a9',
+    marginVertical: 8,
   },
   registerButton: {
     backgroundColor: '#cd1127',
-    width: 250,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginVertical: 8,
-    marginHorizontal: 10,
-    margin: 15,
-    borderRadius: 8,
   },
   buttonText: {
     color: '#fff',
-    fontFamily: 'Bernoru',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
 });
 
