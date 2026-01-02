@@ -34,6 +34,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message
 from backend.app.conversation.conversation_model import Conversation
+from backend.app.contact.contact_model import Contact
 
 # Create all tables
 def create_tables():
