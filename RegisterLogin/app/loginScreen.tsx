@@ -8,6 +8,9 @@ const LoginScreen = () => {
   const [emailOrNumber, setEmailOrNumber] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+
+  //Login Handler pero NOT YET CONNECTED sa BACKEND
+  
   const handleLogin = async () => {
     if (!emailOrNumber.includes('@') && emailOrNumber.length < 10) {
       Alert.alert('Error', 'Invalid email or phone number');
@@ -62,7 +65,7 @@ const LoginScreen = () => {
           <TouchableOpacity style={[styles.buttonBase, styles.cancelButton]} onPress={() => router.push('./')}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.createAcc} onPress={() => console.log('Create account pressed')}>
+          <Text style={styles.createAcc} onPress={() => router.push('./registerScreen')}>
             Create Account
           </Text>
         </View>
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     alignSelf: 'flex-start',
     marginTop:-30,
-    marginBottom: 0,
+    marginBottom: -20,
   },
   container: {
     flex: 1,

@@ -20,7 +20,7 @@ const LoginRegisterScreen = () => {
           <TouchableOpacity style={[styles.buttonBase, styles.loginButton]} onPress={() => router.push('./loginScreen')}>
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.buttonBase, styles.registerButton]} onPress={() => console.log('Register Pressed')}>
+          <TouchableOpacity style={[styles.buttonBase, styles.registerButton]} onPress={() => router.push('./registerScreen')}>
             <Text style={styles.buttonText}>Register</Text>
           </TouchableOpacity>
         </View>
