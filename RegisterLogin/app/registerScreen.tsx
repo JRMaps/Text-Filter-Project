@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RegisterScreen = () => {
@@ -52,6 +52,12 @@ const RegisterScreen = () => {
       return;
     }
 
+    //Check username length
+    if (formData.username.length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+
     // Check password length
     if (formData.password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
@@ -70,13 +76,16 @@ const RegisterScreen = () => {
       return;
     }
 
-    Alert.alert('Success', 'Register Successful');
+    // Send to backend 
+    // If successful, navigate to authScreen
+    router.push('./authScreen');
     // Send to backend / Firebase / mock API
 };
 
     return (
       <SafeAreaView style = {styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header Section */}
         <View>
           <Image source={require('../assets/images/FILTalk Header Logo.png')} accessibilityLabel="FILTalk" style={styles.headerLogo} /> 
@@ -158,11 +167,22 @@ const RegisterScreen = () => {
             Already have an account?
           </Text>
         </View>
+        </ScrollView>
       </SafeAreaView>
     ); 
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
   headerLogo: {
     color: '#000000',
     width: 400,
@@ -171,13 +191,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop:-30,
     marginBottom: -20,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 0,
   },
   formSection: {
     width: '100%',
