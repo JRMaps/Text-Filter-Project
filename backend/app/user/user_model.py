@@ -13,9 +13,14 @@ class User(Base):
     backup_phone_number = Column(String, nullable=True, unique=True)
     active_status = Column(Boolean, default=True)
     password_hash = Column(String, nullable=False)
-    password_reset_token = Column(String, nullable=True)
-    password_reset_expires = Column(DateTime, nullable=True)
-
+    
+    # For password reset via OTP with rate limiting and cooldown
+    otp_hash = Column(String, nullable=True) 
+    password_reset_expires = Column(DateTime, nullable=True) 
+    otp_attempts = Column(Integer, default=0) 
+    otp_sent_at = Column(DateTime, nullable=True)  
+    otp_locked_until = Column(DateTime, nullable=True)
+    
     sent_messages = relationship(
         "Message",
         foreign_keys="[Message.sender_id]",
