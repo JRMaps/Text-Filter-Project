@@ -1,26 +1,48 @@
 import re
 from normalizationV1 import normalization
 
+# Token types to be used in parsing
+
 TOKEN_OFFENSIVE = "OFFENSIVE"
 TOKEN_PRONOUN = "PRONOUN"
 TOKEN_WORD = "WORD"
 TOKEN_UNKNOWN = "UNKNOWN"
-#help breakdown offensive words in Filipino language
-OFFENSIVE_ROOT = r'(puta|gago|bobo|tanga|yawa|pakshet|leche|tarantado|chupa|puki|puke)'
-PREFIX = r'(pinag|pag|mag|ma|na|pa)?'
-SUFFIX = r'(han|hin|an|ng)?'
+
+# Base offensive roots 
+OFFENSIVE_ROOTS = {
+    "puta", "gago", "bobo", "tanga", "yawa",
+    "pakshet", "leche", "tarantado",
+    "chupa", "puki", "puke"
+}
+
+# Prefixes (Extandable)
+PREFIXES = {
+    "pinag", "pag", "mag", "ma", "na", "pa"
+}
+
+# Suffixes (Extendable)
+SUFFIXES = {
+    "han", "hin", "an", "ng"
+}
+
+# Build regex dynamically
+PREFIX_PATTERN = r'(' + '|'.join(PREFIXES) + r')?'
+ROOT_PATTERN = r'(' + '|'.join(OFFENSIVE_ROOTS) + r')'
+SUFFIX_PATTERN = r'(' + '|'.join(SUFFIXES) + r')?'
 
 OFFENSIVE_PATTERN = re.compile(
-    rf'^{PREFIX}{OFFENSIVE_ROOT}{SUFFIX}$',
+    rf'^{PREFIX_PATTERN}{ROOT_PATTERN}{SUFFIX_PATTERN}$',
     re.IGNORECASE
 )
 
+
 WORD_PATTERN = re.compile(r'^[a-z]+$')
 
-PRONOUNS = {   #added pronoun token for Filipino language
+PRONOUNS = {
     "ka", "mo", "kayo", "siya", "niya",
     "nila", "namin", "ninyo", "tayo", "ikaw"
 }
+
 
 def tokenize(text: str):
     tokens = []
