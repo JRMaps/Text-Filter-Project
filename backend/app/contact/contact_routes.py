@@ -22,8 +22,6 @@ from backend.app.contact.contact_shema import (
 from backend.app.contact.contact_model import ContactStatus
 from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
-from backend.app.websocket.connection_manager import manager
-from datetime import datetime
 
 router = APIRouter()
 
@@ -35,29 +33,11 @@ async def api_send_contact_request(
 ):
     """
     Send a contact request to another user.
-    Triggers WebSocket event for real-time notification.
     """
     contact = send_contact_request(
         user_id=current_user.id,
         contact_id=request.contact_id
     )
-    
-    # Broadcast WebSocket event to the contact
-    await manager.send_to_user(
-        request.contact_id,
-        {
-            "type": "contact:request_received",
-            "payload": {
-                "id": contact.id,
-                "user_id": current_user.id,
-                "username": current_user.username,
-                "contact_id": contact.contact_id,
-                "status": contact.status.value,
-                "created_at": contact.created_at.isoformat()
-            }
-        }
-    )
-    
     return contact
 
 
@@ -68,42 +48,11 @@ async def api_accept_contact_request(
 ):
     """
     Accept a pending contact request.
-    Triggers WebSocket event for real-time notification.
     """
     contact = accept_contact_request(
         user_id=current_user.id,
         contact_id=contact_id
     )
-    
-    # Broadcast WebSocket event to both users
-    await manager.send_to_user(
-        contact_id,
-        {
-            "type": "contact:request_accepted",
-            "payload": {
-                "id": contact.id,
-                "user_id": contact.user_id,
-                "contact_id": contact.contact_id,
-                "status": contact.status.value,
-                "updated_at": contact.updated_at.isoformat()
-            }
-        }
-    )
-    
-    await manager.send_to_user(
-        current_user.id,
-        {
-            "type": "contact:request_accepted",
-            "payload": {
-                "id": contact.id,
-                "user_id": contact.user_id,
-                "contact_id": contact.contact_id,
-                "status": contact.status.value,
-                "updated_at": contact.updated_at.isoformat()
-            }
-        }
-    )
-    
     return contact
 
 
@@ -119,19 +68,6 @@ async def api_reject_contact_request(
         user_id=current_user.id,
         contact_id=contact_id
     )
-    
-    # Notify the requester
-    await manager.send_to_user(
-        contact_id,
-        {
-            "type": "contact:request_rejected",
-            "payload": {
-                "contact_id": current_user.id,
-                "username": current_user.username
-            }
-        }
-    )
-    
     return result
 
 
@@ -147,19 +83,6 @@ async def api_remove_contact(
         user_id=current_user.id,
         contact_id=contact_id
     )
-    
-    # Notify the removed contact
-    await manager.send_to_user(
-        contact_id,
-        {
-            "type": "contact:removed",
-            "payload": {
-                "user_id": current_user.id,
-                "username": current_user.username
-            }
-        }
-    )
-    
     return result
 
 
@@ -175,19 +98,6 @@ async def api_block_contact(
         user_id=current_user.id,
         contact_id=contact_id
     )
-    
-    # Notify the blocked contact
-    await manager.send_to_user(
-        contact_id,
-        {
-            "type": "contact:blocked",
-            "payload": {
-                "user_id": current_user.id,
-                "username": current_user.username
-            }
-        }
-    )
-    
     return contact
 
 
@@ -203,7 +113,6 @@ async def api_unblock_contact(
         user_id=current_user.id,
         contact_id=contact_id
     )
-    
     return result
 
 
