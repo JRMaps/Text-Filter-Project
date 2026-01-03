@@ -4,17 +4,8 @@ from backend.app.websocket.ws_auth import get_user_from_websocket
 from backend.app.websocket.ws_helpers import get_user_contact_ids
 from backend.app.database.database import SessionLocal
 from backend.app.message.message_service import send_message
-from backend.app.message.message_schema import MessageRead, DeliveryStatus
-from backend.app.conversation.conversation_service import get_all_conversations
-from backend.app.conversation.conversation_schema import ConversationDashboardItem
 from backend.app.message.message_model import Message, DeliveryStatus as ModelDeliveryStatus
-from backend.app.contact.contact_service import (
-    send_contact_request,
-    accept_contact_request,
-    reject_contact_request,
-    remove_contact,
-    block_contact
-)
+from backend.app.conversation.conversation_model import Conversation
 from datetime import datetime
 
 async def ws_chat(websocket: WebSocket):
@@ -22,21 +13,17 @@ async def ws_chat(websocket: WebSocket):
     WebSocket endpoint for real-time chat features.
     
     Events handled:
-    - message:new - Send a new message
-    - message:mark_delivered - Mark message as delivered
-    - message:mark_read - Mark message as read
-    - contact:send_request - Send a contact request
-    - contact:accept - Accept a contact request
-    - contact:reject - Reject a contact request
-    - contact:remove - Remove a contact
-    - contact:block - Block a contact
+    - send a new message
+    - update the conversation dashboard
+    - message status updates (sent/delivered/read)
+    - active status updates (online/offline)
     - user:ping - Keep connection alive (optional)
     """
     # Authenticate user
     try:
         current_user = await get_user_from_websocket(websocket)
-    except Exception as e:
-        return  # Connection already closed by auth function
+    except Exception:
+        return 
     
     # Connect user and check if status changed
     status_changed = await manager.connect(current_user.id, websocket)
@@ -70,7 +57,6 @@ async def ws_chat(websocket: WebSocket):
                     })
                     continue
                 
-                # Send message using service
                 try:
                     message = send_message(
                         sender_id=current_user.id,
@@ -78,8 +64,29 @@ async def ws_chat(websocket: WebSocket):
                         content=content
                     )
 
+                    # Get conversation details for dashboard update
+                    db = SessionLocal()
+                    try:
+                        conversation = db.query(Conversation).filter(
+                            Conversation.id == message.conversation_id
+                        ).first()
+                        
+                        # Build dashboard update payload
+                        dashboard_update = {
+                            "type": "conversation:dashboard:update",
+                            "payload": {
+                                "conversation_id": message.conversation_id,
+                                "last_message": message.content,
+                                "updated_at": conversation.updated_at.isoformat() if conversation else datetime.utcnow().isoformat()
+                            }
+                        }
+                    finally:
+                        db.close()
+
                     # Broadcast to conversation participants
                     participant_ids = [current_user.id, receiver_id]
+                    
+                    # Send new message event
                     await manager.send_to_conversation(
                         participant_ids=participant_ids,
                         payload={
@@ -97,17 +104,10 @@ async def ws_chat(websocket: WebSocket):
                         }
                     )
                     
-                    # Broadcast dashboard update to both participants
+                    # Send dashboard update event to all participants
                     await manager.send_to_conversation(
                         participant_ids=participant_ids,
-                        payload={
-                            "type": "conversation:dashboard_update",
-                            "payload": {
-                                "conversation_id": message.conversation_id,
-                                "last_message_id": message.id,
-                                "updated_at": message.created_at.isoformat()
-                            }
-                        }
+                        payload=dashboard_update
                     )
                 except Exception as e:
                     await websocket.send_json({
@@ -211,219 +211,6 @@ async def ws_chat(websocket: WebSocket):
                 finally:
                     db.close()
             
-            elif event == "contact:send_request":
-                # Send a contact request
-                contact_id = payload.get("contact_id")
-                if not contact_id:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": "contact_id is required"}
-                    })
-                    continue
-                
-                try:
-                    contact = send_contact_request(
-                        user_id=current_user.id,
-                        contact_id=contact_id
-                    )
-                    
-                    # Notify the contact
-                    await manager.send_to_user(
-                        contact_id,
-                        {
-                            "type": "contact:request_received",
-                            "payload": {
-                                "id": contact.id,
-                                "user_id": current_user.id,
-                                "username": current_user.username,
-                                "contact_id": contact.contact_id,
-                                "status": contact.status.value,
-                                "created_at": contact.created_at.isoformat()
-                            }
-                        }
-                    )
-                    
-                    # Confirm to sender
-                    await websocket.send_json({
-                        "type": "contact:request_sent",
-                        "payload": {
-                            "id": contact.id,
-                            "contact_id": contact.contact_id,
-                            "status": contact.status.value,
-                            "created_at": contact.created_at.isoformat()
-                        }
-                    })
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": str(e)}
-                    })
-            
-            elif event == "contact:accept":
-                # Accept a contact request
-                contact_id = payload.get("contact_id")
-                if not contact_id:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": "contact_id is required"}
-                    })
-                    continue
-                
-                try:
-                    contact = accept_contact_request(
-                        user_id=current_user.id,
-                        contact_id=contact_id
-                    )
-                    
-                    # Notify both users
-                    await manager.send_to_user(
-                        contact_id,
-                        {
-                            "type": "contact:request_accepted",
-                            "payload": {
-                                "id": contact.id,
-                                "user_id": contact.user_id,
-                                "contact_id": contact.contact_id,
-                                "status": contact.status.value,
-                                "updated_at": contact.updated_at.isoformat()
-                            }
-                        }
-                    )
-                    
-                    await websocket.send_json({
-                        "type": "contact:request_accepted",
-                        "payload": {
-                            "id": contact.id,
-                            "contact_id": contact_id,
-                            "status": contact.status.value,
-                            "updated_at": contact.updated_at.isoformat()
-                        }
-                    })
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": str(e)}
-                    })
-            
-            elif event == "contact:reject":
-                # Reject a contact request
-                contact_id = payload.get("contact_id")
-                if not contact_id:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": "contact_id is required"}
-                    })
-                    continue
-                
-                try:
-                    result = reject_contact_request(
-                        user_id=current_user.id,
-                        contact_id=contact_id
-                    )
-                    
-                    # Notify the requester
-                    await manager.send_to_user(
-                        contact_id,
-                        {
-                            "type": "contact:request_rejected",
-                            "payload": {
-                                "contact_id": current_user.id,
-                                "username": current_user.username
-                            }
-                        }
-                    )
-                    
-                    await websocket.send_json({
-                        "type": "contact:request_rejected",
-                        "payload": result
-                    })
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": str(e)}
-                    })
-            
-            elif event == "contact:remove":
-                # Remove a contact
-                contact_id = payload.get("contact_id")
-                if not contact_id:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": "contact_id is required"}
-                    })
-                    continue
-                
-                try:
-                    result = remove_contact(
-                        user_id=current_user.id,
-                        contact_id=contact_id
-                    )
-                    
-                    # Notify the removed contact
-                    await manager.send_to_user(
-                        contact_id,
-                        {
-                            "type": "contact:removed",
-                            "payload": {
-                                "user_id": current_user.id,
-                                "username": current_user.username
-                            }
-                        }
-                    )
-                    
-                    await websocket.send_json({
-                        "type": "contact:removed",
-                        "payload": result
-                    })
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": str(e)}
-                    })
-            
-            elif event == "contact:block":
-                # Block a contact
-                contact_id = payload.get("contact_id")
-                if not contact_id:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": "contact_id is required"}
-                    })
-                    continue
-                
-                try:
-                    contact = block_contact(
-                        user_id=current_user.id,
-                        contact_id=contact_id
-                    )
-                    
-                    # Notify the blocked contact
-                    await manager.send_to_user(
-                        contact_id,
-                        {
-                            "type": "contact:blocked",
-                            "payload": {
-                                "user_id": current_user.id,
-                                "username": current_user.username
-                            }
-                        }
-                    )
-                    
-                    await websocket.send_json({
-                        "type": "contact:blocked",
-                        "payload": {
-                            "id": contact.id,
-                            "contact_id": contact.contact_id,
-                            "status": contact.status.value,
-                            "updated_at": contact.updated_at.isoformat()
-                        }
-                    })
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "payload": {"message": str(e)}
-                    })
-            
             elif event == "user:ping":
                 # Keep-alive ping
                 await websocket.send_json({
@@ -438,13 +225,11 @@ async def ws_chat(websocket: WebSocket):
                 })
     
     except WebSocketDisconnect:
-        # User disconnected
         pass
     except Exception as e:
-        # Handle other errors
         print(f"WebSocket error: {e}")
     finally:
-        # Disconnect user and broadcast offline status if needed
+        # Disconnect user and broadcast offline status
         status_changed = manager.disconnect(current_user.id, websocket)
         if status_changed:
             await manager.broadcast_online_status(
