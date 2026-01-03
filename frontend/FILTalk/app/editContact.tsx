@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -11,19 +11,19 @@ import {
   Image,
   TextInput,
   Alert,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useContact, ContactData } from '@/context/ContactContext';
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useContact, ContactData } from "@/context/ContactContext";
 
 const EditContactScreen = () => {
   const router = useRouter();
   const { selectedContact, updateContact } = useContact();
 
   const [contactData, setContactData] = useState<ContactData>({
-    id: '',
-    name: '',
-    email: '',
-    phone: '',
+    id: "",
+    name: "",
+    email: "",
+    phone: "",
     avatar: null,
   });
 
@@ -35,35 +35,38 @@ const EditContactScreen = () => {
 
   const pickImage = async () => {
     // Request permission
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera roll is required!"
+      );
       return;
     }
 
     // Show options to user
-    Alert.alert(
-      'Select Image',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: openCamera },
-        { text: 'Gallery', onPress: openGallery },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert("Select Image", "Choose an option", [
+      { text: "Camera", onPress: openCamera },
+      { text: "Gallery", onPress: openGallery },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera is required!"
+      );
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: 'images',
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -76,7 +79,7 @@ const EditContactScreen = () => {
 
   const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -89,13 +92,13 @@ const EditContactScreen = () => {
 
   const handleSave = () => {
     if (!contactData.name.trim()) {
-      Alert.alert('Error', 'Name is required');
+      Alert.alert("Error", "Name is required");
       return;
     }
 
     updateContact(contactData);
-    Alert.alert('Success', 'Contact updated successfully!', [
-      { text: 'OK', onPress: () => router.back() }
+    Alert.alert("Success", "Contact updated successfully!", [
+      { text: "OK", onPress: () => router.back() },
     ]);
   };
 
@@ -122,8 +125,14 @@ const EditContactScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Image source={require('@/assets/images/returnButton.png')} style={styles.backIcon} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Image
+              source={require("@/assets/images/returnButton.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Contact</Text>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -136,7 +145,10 @@ const EditContactScreen = () => {
           <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
             <View style={styles.avatar}>
               {contactData.avatar ? (
-                <Image source={{ uri: contactData.avatar }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: contactData.avatar }}
+                  style={styles.avatarImage}
+                />
               ) : (
                 <View style={styles.avatarIcon}>
                   <View style={styles.avatarHead} />
@@ -158,7 +170,9 @@ const EditContactScreen = () => {
             <TextInput
               style={styles.input}
               value={contactData.name}
-              onChangeText={(text) => setContactData({ ...contactData, name: text })}
+              onChangeText={(text) =>
+                setContactData({ ...contactData, name: text })
+              }
               placeholder="Enter name"
               placeholderTextColor="#999"
             />
@@ -169,7 +183,9 @@ const EditContactScreen = () => {
             <TextInput
               style={styles.input}
               value={contactData.phone}
-              onChangeText={(text) => setContactData({ ...contactData, phone: text })}
+              onChangeText={(text) =>
+                setContactData({ ...contactData, phone: text })
+              }
               placeholder="Enter phone number"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
@@ -181,7 +197,9 @@ const EditContactScreen = () => {
             <TextInput
               style={styles.input}
               value={contactData.email}
-              onChangeText={(text) => setContactData({ ...contactData, email: text })}
+              onChangeText={(text) =>
+                setContactData({ ...contactData, email: text })
+              }
               placeholder="Enter email"
               placeholderTextColor="#999"
               keyboardType="email-address"
@@ -197,33 +215,33 @@ const EditContactScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: "#666",
     marginBottom: 20,
   },
   backButtonEmpty: {
-    backgroundColor: '#f6ca15',
+    backgroundColor: "#f6ca15",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 15,
@@ -234,56 +252,56 @@ const styles = StyleSheet.create({
   backIcon: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#000',
+    fontWeight: "900",
+    color: "#000",
   },
   saveButton: {
-    backgroundColor: '#f6ca15',
+    backgroundColor: "#f6ca15",
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '900',
-    color: '#0039a9',
+    fontWeight: "900",
+    color: "#0039a9",
   },
   profilePictureSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 30,
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   avatarIcon: {
     width: 100,
     height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatarHead: {
     width: 35,
     height: 35,
     borderRadius: 17.5,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginBottom: 3,
   },
   avatarBody: {
@@ -291,18 +309,18 @@ const styles = StyleSheet.create({
     height: 40,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
   },
   editIconContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f6ca15',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f6ca15",
+    justifyContent: "center",
+    alignItems: "center",
   },
   editIconText: {
     fontSize: 18,
@@ -310,7 +328,7 @@ const styles = StyleSheet.create({
   changePhotoText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   formSection: {
     paddingHorizontal: 20,
@@ -320,19 +338,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '900',
-    color: '#000',
+    fontWeight: "900",
+    color: "#000",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#000',
+    color: "#000",
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: "#E8E8E8",
   },
 });
 
