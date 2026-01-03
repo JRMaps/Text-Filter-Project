@@ -33,3 +33,8 @@ class UserRead(UserBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    backup_email: Optional[EmailStr] = None
+    backup_phone_number: Optional[str] = None

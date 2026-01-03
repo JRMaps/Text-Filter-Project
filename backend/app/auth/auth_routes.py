@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from backend.app.auth.auth_controller import register_user, login_user
+from backend.app.auth.auth_controller import register_user, login_user, request_password_reset_otp, verify_password_reset_otp, reset_password_with_otp
 from backend.app.user.user_schema import UserCreate, UserLogin
-from backend.app.auth.auth_schema import Token
+from backend.app.auth.auth_schema import Token, ForgotPasswordOTPRequest, VerifyOTPRequest, ResetPasswordRequest
 
 router = APIRouter()
 
@@ -39,3 +39,33 @@ async def login(login_data: UserLogin):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/forgot-password-otp", status_code=200)
+async def forgot_password_otp(payload: ForgotPasswordOTPRequest):
+    """
+    Request an OTP for password reset.
+    Sends OTP to user's email or phone.
+    """
+    return await request_password_reset_otp(payload.identifier)
+
+
+@router.post("/verify-otp", status_code=200)
+async def verify_otp(payload: VerifyOTPRequest):
+    """
+    Verify the OTP sent to user.
+    Must be called before resetting password.
+    """
+    return await verify_password_reset_otp(payload.identifier, payload.otp)
+
+
+@router.post("/reset-password-otp", status_code=200)
+async def reset_user_password_with_otp(payload: ResetPasswordRequest):
+    """
+    Reset password after OTP verification.
+    Can only be called after successful OTP verification.
+    """
+    return await reset_password_with_otp(
+        payload.identifier,
+        payload.new_password
+    )

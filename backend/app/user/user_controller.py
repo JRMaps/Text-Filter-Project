@@ -3,7 +3,7 @@ from sqlalchemy import or_
 from typing import List
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.user.user_schema import UserRead
+from backend.app.user.user_schema import UserRead, UserUpdate  # Import UserUpdate schema
 
 
 def get_db():
@@ -105,6 +105,73 @@ def view_user_profile(user_id: int) -> UserRead:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching user profile: {str(e)}"
+        )
+    finally:
+        db.close()
+
+
+def edit_user_profile(user_id: int, user_update: UserUpdate) -> UserRead:
+    """
+    Edit the current user's profile.
+    
+    Args:
+        user_id: ID of the user to update
+        user_update: Data to update the user profile with
+        
+    Returns:
+        UserRead: Updated user profile information
+    """
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        update_data = user_update.model_dump(exclude_unset=True)
+        
+        if "backup_email" in update_data and update_data["backup_email"]:
+            existing_user = db.query(User).filter(
+                User.backup_email == update_data["backup_email"],
+                User.id != user_id
+            ).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Backup email already in use"
+                )
+        
+        if "backup_phone_number" in update_data and update_data["backup_phone_number"]:
+            existing_user = db.query(User).filter(
+                User.backup_phone_number == update_data["backup_phone_number"],
+                User.id != user_id
+            ).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Backup phone number already in use"
+                )
+        
+        # Update user fields
+        for field, value in update_data.items():
+            setattr(user, field, value)
+        
+        db.commit()
+        db.refresh(user)
+        
+        return UserRead.model_validate(user)
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating user profile: {str(e)}"
         )
     finally:
         db.close()
