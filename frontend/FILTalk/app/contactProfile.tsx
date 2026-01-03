@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
@@ -10,34 +10,52 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { useContact } from './ContactContext';
+import { useContact } from '@/context/ContactContext';
 
-const ContactsAccScreen = () => {
+const ContactProfileScreen = () => {
   const router = useRouter();
-  const { contactData } = useContact();
-  const contactsProfileData = contactData;
+  const { selectedContact } = useContact();
+
+  // If no contact is selected, go back
+  if (!selectedContact) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No contact selected</Text>
+          <TouchableOpacity 
+            style={styles.backButtonEmpty} 
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const profileItems = [
-    { icon: require('../assets/images/phoneIcon.png'), label: 'Call' },
-    { icon: require('../assets/images/messageIcon.png'), label: 'Messages' },
-    { icon: require('../assets/images/videoIcon.png'), label: 'Video' },
-    { icon: require('../assets/images/emailIcon.png'), label: 'Email' },
-    { icon: require('../assets/images/moreIcon.png'), label: 'More' }, 
+    { icon: require('@/assets/images/phoneIcon.png'), label: 'Call' },
+    { icon: require('@/assets/images/messageIcon.png'), label: 'Messages' },
+    { icon: require('@/assets/images/videoIcon.png'), label: 'Video' },
+    { icon: require('@/assets/images/emailIcon.png'), label: 'Email' },
+    { icon: require('@/assets/images/moreIcon.png'), label: 'More' },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-      
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          {/* Back Button na hindi pa connected sa CONTACTS paconnect nalanggzzz wala siya sakin e*/}
-          <TouchableOpacity style={styles.backButton} onPress={() => console.log('Back pressed')}>
-            <Image source={require('../assets/images/returnButton (1).png')} style={styles.backIcon} />
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Image source={require('@/assets/images/returnButton.png')} style={styles.backIcon} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/editContact')}>
+          <TouchableOpacity 
+            style={styles.editButton} 
+            onPress={() => router.push('/editContact' as Href)}
+          >
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -45,8 +63,8 @@ const ContactsAccScreen = () => {
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            {contactsProfileData.avatar ? (
-              <Image source={{ uri: contactsProfileData.avatar }} style={styles.avatarImage} />
+            {selectedContact.avatar ? (
+              <Image source={{ uri: selectedContact.avatar }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarIcon}>
                 <View style={styles.avatarHead} />
@@ -55,7 +73,15 @@ const ContactsAccScreen = () => {
             )}
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{contactsProfileData.name}</Text>
+            <Text style={styles.profileName}>{selectedContact.name}</Text>
+            {selectedContact.status && (
+              <Text style={[
+                styles.statusText,
+                selectedContact.status === 'Online' && styles.onlineStatus
+              ]}>
+                {selectedContact.lastSeen || selectedContact.status}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -75,12 +101,12 @@ const ContactsAccScreen = () => {
         <View style={styles.detailsCard}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Mobile Number</Text>
-            <Text style={styles.detailValue}>{contactsProfileData.phone}</Text>
+            <Text style={styles.detailValue}>{selectedContact.phone}</Text>
           </View>
           <View style={styles.detailDivider} />
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Email</Text>
-            <Text style={styles.detailValue}>{contactsProfileData.email}</Text>
+            <Text style={styles.detailValue}>{selectedContact.email}</Text>
           </View>
         </View>
       </ScrollView>
@@ -92,6 +118,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
+  },
+  backButtonEmpty: {
+    backgroundColor: '#f6ca15',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -164,14 +211,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   profileInfo: {
-    flex: 1,
+    alignItems: 'center',
   },
   profileName: {
-    fontSize: 48,
+    fontSize: 36,
     fontWeight: '900',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  onlineStatus: {
+    color: '#4CAF50',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -207,7 +261,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000',
     fontWeight: '800',
-    
   },
   detailsCard: {
     backgroundColor: '#FFF',
@@ -241,4 +294,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ContactsAccScreen;
+export default ContactProfileScreen;

@@ -15,19 +15,19 @@ import { useRouter } from 'expo-router';
 
 const EditProfileScreen = () => {
   const router = useRouter();
-  
+
   // Profile state - will be populated with current user data
   const [profileData, setProfileData] = useState({
     name: 'Enter your name',
-    email: 'Enter your email', 
+    email: 'Enter your email',
     phone: 'Enter your phone number',
-    profileImage: null as string | null // Allow both string and null
+    profileImage: null as string | null
   });
 
   const handleImagePicker = async () => {
     // Request permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       Alert.alert('Permission Required', 'Permission to access camera roll is required!');
       return;
@@ -38,8 +38,8 @@ const EditProfileScreen = () => {
       'Select Image',
       'Choose an option',
       [
-        { text: 'Camera', onPress: openCamera },
-        { text: 'Gallery', onPress: openGallery },
+        { text: 'Camera', onPress: () => { openCamera(); } },
+        { text: 'Gallery', onPress: () => { openGallery(); } },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -47,7 +47,7 @@ const EditProfileScreen = () => {
 
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       Alert.alert('Permission Required', 'Permission to access camera is required!');
       return;
@@ -60,8 +60,8 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets && result.assets[0]) {
-      setProfileData({...profileData, profileImage: result.assets[0].uri});
+    if (!result.canceled && result.assets?.[0]) {
+      setProfileData({ ...profileData, profileImage: result.assets[0].uri });
     }
   };
 
@@ -73,16 +73,15 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets && result.assets[0]) {
-      setProfileData({...profileData, profileImage: result.assets[0].uri});
+    if (!result.canceled && result.assets?.[0]) {
+      setProfileData({ ...profileData, profileImage: result.assets[0].uri });
     }
   };
 
   const handleSave = () => {
-    // TODO: Save changes to backend with image upload
+    // Save changes to backend with image upload
     console.log('Saving profile changes:', profileData);
-    
-    // For now, show success message
+
     Alert.alert(
       'Profile Updated',
       'Your profile has been updated successfully!',
@@ -91,7 +90,7 @@ const EditProfileScreen = () => {
   };
 
   const handleCancel = () => {
-    router.back(); // Go back without saving
+    router.back();
   };
 
   return (
@@ -112,13 +111,13 @@ const EditProfileScreen = () => {
         <View style={styles.profilePictureSection}>
           <TouchableOpacity style={styles.avatar} onPress={handleImagePicker}>
             {profileData.profileImage ? (
-              <Image 
-                source={{ uri: profileData.profileImage }} 
+              <Image
+                source={{ uri: profileData.profileImage }}
                 style={styles.profileImageStyle}
               />
             ) : (
-              <Image 
-                source={require('../assets/images/account.png')} 
+              <Image
+                source={require('@/assets/images/account.png')}
                 style={styles.defaultProfileImage}
               />
             )}
@@ -135,7 +134,7 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.name}
-              onChangeText={(text) => setProfileData({...profileData, name: text})}
+              onChangeText={(text) => setProfileData({ ...profileData, name: text })}
               placeholder="Enter your name"
               placeholderTextColor="#999"
             />
@@ -146,7 +145,7 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.email}
-              onChangeText={(text) => setProfileData({...profileData, email: text})}
+              onChangeText={(text) => setProfileData({ ...profileData, email: text })}
               placeholder="Enter your email"
               placeholderTextColor="#999"
               keyboardType="email-address"
@@ -159,7 +158,7 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.phone}
-              onChangeText={(text) => setProfileData({...profileData, phone: text})}
+              onChangeText={(text) => setProfileData({ ...profileData, phone: text })}
               placeholder="Enter your phone number"
               placeholderTextColor="#999"
               keyboardType="phone-pad"

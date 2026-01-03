@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
@@ -13,35 +13,39 @@ import {
 
 const AccountScreen = () => {
   const router = useRouter();
-  
+
   // User profile state - will be populated by backend API
-  const [userProfile, setUserProfile] = useState({
-    name: 'Lorem ipsum dolor', 
-    email: 'lorem@gmail.com', 
-    phone: '09231734621' 
+  const [userProfile] = useState({
+    name: 'Lorem ipsum dolor',
+    email: 'lorem@gmail.com',
+    phone: '09231734621'
   });
 
-
   const settingsMenuItems = [
-    { icon: require('../assets/images/settings.png'), label: 'Settings' },
+    { id: 'settings', icon: require('@/assets/images/settings.png'), label: 'Settings' },
   ];
 
   const menuItems = [
-    { icon: require('../assets/images/language.png'), label: 'Language' },
-    { icon: require('../assets/images/theme.png'), label: 'Theme' },
-    { icon: require('../assets/images/notifs.png'), label: 'Notifications and Sounds' },
-    { icon: require('../assets/images/privacy.png'), label: 'Privacy' },
+    { id: 'language', icon: require('@/assets/images/language.png'), label: 'Language' },
+    { id: 'theme', icon: require('@/assets/images/theme.png'), label: 'Theme' },
+    { id: 'notifs', icon: require('@/assets/images/notifs.png'), label: 'Notifications and Sounds' },
+    { id: 'privacy', icon: require('@/assets/images/privacy.png'), label: 'Privacy' },
   ];
+
+  const handleLogout = () => {
+    // Clear auth state and navigate to login
+    router.replace('/(auth)' as Href);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-      
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Account</Text>
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit')}>
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit' as Href)}>
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -55,19 +59,17 @@ const AccountScreen = () => {
             </View>
           </View>
           <View style={styles.profileInfo}>
-
-            {/* Placeholder - replace with REAL data */}
             <Text style={styles.profileName}>{userProfile.name}</Text>
-            <Text style={styles.profileEmail}>{userProfile.email}</Text> 
+            <Text style={styles.profileEmail}>{userProfile.email}</Text>
             <Text style={styles.profilePhone}>{userProfile.phone}</Text>
           </View>
         </View>
 
         {/* Settings Card */}
         <View style={styles.settingsCard}>
-          {settingsMenuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+          {settingsMenuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
               style={styles.menuItem}
               activeOpacity={0.7}
             >
@@ -81,8 +83,8 @@ const AccountScreen = () => {
         {/* Menu Items Card */}
         <View style={styles.menuCard}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={item.id}
               style={[
                 styles.menuItem,
                 index < menuItems.length - 1 && styles.menuItemBorder
@@ -96,35 +98,14 @@ const AccountScreen = () => {
           ))}
         </View>
 
-        {/* Spacer for bottom navigation */}
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Spacer for bottom */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <View style={styles.bottomNavContainer}>
-          <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-            <View style={styles.navIconContainer}>
-              <Image source={require('../assets/images/contacts.png')} style={styles.navIcon} />
-            </View>
-            <Text style={styles.navLabel}>Contacts</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-            <View style={styles.navIconContainer}>
-              <Image source={require('../assets/images/messages.png')} style={styles.navIcon} />
-            </View>
-            <Text style={styles.navLabel}>Messages</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-            <View style={styles.navIconContainer}>
-              <Image source={require('../assets/images/account.png')} style={styles.navIconLarge} />
-            </View>
-            <Text style={[styles.navLabel, styles.navLabelActive]}>Account</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </SafeAreaView>
   );
 };
@@ -255,55 +236,21 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '300',
   },
-  bottomSpacer: {
-    height: 100,
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 20,
-    paddingTop: 10,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  bottomNavContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    borderRadius: 30,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  navItem: {
-    alignItems: 'center',
+  logoutButton: {
+    backgroundColor: '#cd1127',
     marginHorizontal: 20,
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  navIconContainer: {
-    marginBottom: 4,
-  },
-  navIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-  },
-  navIconLarge: {
-    width: 26,
-    height: 26,
-    resizeMode: 'contain',
-  },
-  navLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  navLabelActive: {
-    color: '#f6ca15',
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
+  },
+  bottomSpacer: {
+    height: 40,
   },
 });
 

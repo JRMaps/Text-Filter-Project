@@ -13,55 +13,117 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useContact } from './ContactContext';
+import { useContact, ContactData } from '@/context/ContactContext';
 
 const EditContactScreen = () => {
   const router = useRouter();
-  const { contactData: sharedContactData, updateContact } = useContact();
-  
-  const [contactData, setContactData] = useState(sharedContactData);
+  const { selectedContact, updateContact } = useContact();
+
+  const [contactData, setContactData] = useState<ContactData>({
+    id: '',
+    name: '',
+    email: '',
+    phone: '',
+    avatar: null,
+  });
 
   useEffect(() => {
-    setContactData(sharedContactData);
-  }, [sharedContactData]);
+    if (selectedContact) {
+      setContactData(selectedContact);
+    }
+  }, [selectedContact]);
 
   const pickImage = async () => {
     // Request permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       Alert.alert('Permission Required', 'Permission to access camera roll is required!');
       return;
     }
 
-    // Launch image picker
+    // Show options to user
+    Alert.alert(
+      'Select Image',
+      'Choose an option',
+      [
+        { text: 'Camera', onPress: openCamera },
+        { text: 'Gallery', onPress: openGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Permission to access camera is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      setContactData({ ...contactData, avatar: result.assets[0].uri });
+    }
+  };
+
+  const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 1,
+      quality: 0.8,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets?.[0]) {
       setContactData({ ...contactData, avatar: result.assets[0].uri });
     }
   };
 
   const handleSave = () => {
+    if (!contactData.name.trim()) {
+      Alert.alert('Error', 'Name is required');
+      return;
+    }
+
     updateContact(contactData);
-    console.log('Saving contact:', contactData);
-    router.back();
+    Alert.alert('Success', 'Contact updated successfully!', [
+      { text: 'OK', onPress: () => router.back() }
+    ]);
   };
+
+  if (!selectedContact) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No contact selected</Text>
+          <TouchableOpacity
+            style={styles.backButtonEmpty}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-      
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Image source={require('../assets/images/returnButton (1).png')} style={styles.backIcon} />
+            <Image source={require('@/assets/images/returnButton.png')} style={styles.backIcon} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Contact</Text>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -98,6 +160,7 @@ const EditContactScreen = () => {
               value={contactData.name}
               onChangeText={(text) => setContactData({ ...contactData, name: text })}
               placeholder="Enter name"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -108,6 +171,7 @@ const EditContactScreen = () => {
               value={contactData.phone}
               onChangeText={(text) => setContactData({ ...contactData, phone: text })}
               placeholder="Enter phone number"
+              placeholderTextColor="#999"
               keyboardType="phone-pad"
             />
           </View>
@@ -119,6 +183,7 @@ const EditContactScreen = () => {
               value={contactData.email}
               onChangeText={(text) => setContactData({ ...contactData, email: text })}
               placeholder="Enter email"
+              placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -133,6 +198,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
+  },
+  backButtonEmpty: {
+    backgroundColor: '#f6ca15',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
   },
   header: {
     flexDirection: 'row',
