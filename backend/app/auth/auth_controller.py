@@ -8,14 +8,10 @@ from backend.app.auth.auth_utils import (
     get_password_hash,
     create_access_token,
     get_user_by_email,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     generate_otp,
     hash_otp,
     send_otp_via_email,
-    send_otp_via_phone,
-    OTP_EXPIRY_MINUTES,
-    OTP_RESEND_COOLDOWN_SECONDS,
-    OTP_MAX_RETRY_ATTEMPTS
+    send_otp_via_phone
 )
 from datetime import timedelta, datetime
 
@@ -30,17 +26,23 @@ def get_db():
 async def register_user(user_data: UserCreate) -> dict:
     db = SessionLocal()
     try:
-        existing_email = get_user_by_email(user_data.email)
-        if existing_email:
+        existing_user = db.query(User).filter(
+            (User.email == user_data.email) |
+            (User.username == user_data.username)
+        ).first()
+        if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="Email or username already registered"
             )
         
         hashed_password = get_password_hash(user_data.password)
         new_user = User(
             username=user_data.username,
             email=user_data.email,
+            phone_number=user_data.phone_number,
+            backup_email=user_data.backup_email,
+            backup_phone_number=user_data.backup_phone_number,
             password_hash=hashed_password
         )
         
@@ -70,31 +72,30 @@ async def register_user(user_data: UserCreate) -> dict:
 
 
 async def login_user(login_data: UserLogin) -> Token:
-    user = get_user_by_email(login_data.email)
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(
+            (User.email == login_data.email) |
+            (User.phone_number == login_data.phone_number)
+        ).first()
+        
+        if not user or not verify_password(login_data.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=30)
+        access_token = create_access_token(
+            data={"sub": user.email, "user_id": user.id},
+            expires_delta=access_token_expires
         )
-    
-    # Verify password
-    if not verify_password(login_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "user_id": user.id},
-        expires_delta=access_token_expires
-    )
-    
-    return Token(access_token=access_token, token_type="bearer")
+        
+        return Token(access_token=access_token, token_type="bearer")
+    finally:
+        db.close()
 
 
 async def request_password_reset_otp(identifier: str) -> dict:
@@ -111,29 +112,12 @@ async def request_password_reset_otp(identifier: str) -> dict:
             return {"message": "If the account exists, an OTP has been sent."}
 
         now = datetime.utcnow()
-        
-        # Check rate limiting
-        if user.otp_locked_until and now < user.otp_locked_until:
-            raise HTTPException(
-                status_code=429,
-                detail="Too many OTP requests. Please try again later."
-            )
-        
-        # Check cooldown period
-        if user.otp_sent_at:
-            time_since_last_otp = (now - user.otp_sent_at).total_seconds()
-            if time_since_last_otp < OTP_RESEND_COOLDOWN_SECONDS:
-                raise HTTPException(
-                    status_code=429,
-                    detail=f"Please wait {int(OTP_RESEND_COOLDOWN_SECONDS - time_since_last_otp)} seconds before requesting another OTP."
-                )
 
         otp = generate_otp()
         user.otp_hash = hash_otp(otp)
-        user.password_reset_expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+        user.password_reset_expires = now + timedelta(minutes=10)
         user.otp_attempts = 0
         user.otp_verified = False
-        user.otp_sent_at = now 
 
         db.commit()
 
@@ -158,36 +142,20 @@ async def verify_password_reset_otp(identifier: str, otp: str) -> dict:
             (User.backup_phone_number == identifier)
         ).first()
 
-        if not user or not user.otp_hash:  
+        if not user or not user.otp_hash:
             raise HTTPException(status_code=400, detail="Invalid OTP")
 
         now = datetime.utcnow()
 
-        # Check if OTP is expired
         if now > user.password_reset_expires:
-            user.otp_hash = None 
+            user.otp_hash = None
             db.commit()
             raise HTTPException(status_code=400, detail="OTP expired")
 
-        # Check max attempts
-        if user.otp_attempts >= OTP_MAX_RETRY_ATTEMPTS:
-            user.otp_locked_until = now + timedelta(minutes=30)  # ← Added: lock account
-            user.otp_hash = None 
-            db.commit()
-            raise HTTPException(
-                status_code=429,
-                detail="Too many failed attempts. Account locked for 30 minutes."
-            )
-
-        # Verify OTP
-        if user.otp_hash != hash_otp(otp):  
+        if user.otp_hash != hash_otp(otp):
             user.otp_attempts += 1
             db.commit()
-            remaining_attempts = OTP_MAX_RETRY_ATTEMPTS - user.otp_attempts
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid OTP. {remaining_attempts} attempts remaining."
-            )
+            raise HTTPException(status_code=400, detail="Invalid OTP")
 
         # OTP is valid
         user.otp_verified = True
@@ -217,13 +185,11 @@ async def reset_password_with_otp(identifier: str, new_password: str) -> dict:
 
         user.password_hash = get_password_hash(new_password)
 
-        # Cleanup - use correct field names
-        user.otp_hash = None  # ← Fixed: use otp_hash
+        # Cleanup
+        user.otp_hash = None
         user.otp_verified = False
         user.password_reset_expires = None
         user.otp_attempts = 0
-        user.otp_sent_at = None  # ← Added: clear timestamp
-        user.otp_locked_until = None  # ← Added: clear lock
 
         db.commit()
 
