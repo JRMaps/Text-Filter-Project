@@ -11,7 +11,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ContactProvider } from "@/context/ContactContext";
 
 export const unstable_settings = {
-  initialRouteName: "(auth)",
+  initialRouteName: "(tabs)",
 };
 
 export default function RootLayout() {

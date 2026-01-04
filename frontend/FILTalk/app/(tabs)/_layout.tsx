@@ -75,15 +75,9 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hide the old screens from tab bar */}
+      {/* Hide the splash screen from tab bar */}
       <Tabs.Screen
         name="index"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
         options={{
           href: null,
         }}

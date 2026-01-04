@@ -48,8 +48,8 @@ const RegisterScreen = () => {
     }
 
     // TODO: Implement actual registration with backend
-    Alert.alert("Success", "Registration Successful! Please login.", [
-      { text: "OK", onPress: () => router.replace("./login") },
+    Alert.alert("Success", "Registration Successful!", [
+      { text: "OK", onPress: () => router.replace("/(tabs)/messages") },
     ]);
   };
 

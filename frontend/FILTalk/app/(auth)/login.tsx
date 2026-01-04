@@ -28,7 +28,7 @@ const LoginScreen = () => {
 
     // Implement actual authentication with backend
     Alert.alert("Success", "Login Successful", [
-      { text: "OK", onPress: () => router.replace("/(tabs)" as Href) },
+      { text: "OK", onPress: () => router.replace("/(tabs)/messages" as Href) },
     ]);
   };
 
