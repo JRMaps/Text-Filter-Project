@@ -73,16 +73,6 @@ def find_or_create_conversation(db: Session, sender_id: int, receiver_id: int) -
 def send_message(sender_id: int, receiver_id: int, content: str):
     """
     Send a message between two users. Creates a conversation if it doesn't exist.
-
-    # simplified flow:
-    # - find conversation (create for new ones)
-    # - determine the participants in the conversation
-    # - filter message
-    # - store the message with its moderation_status, delivery_status and other metadata in the database
-    # - deliver the message to the receiver(s):
-    #    - if the receiver(s) has an active websocket connection, push the message immediately
-    #    - else, it will be fetched when the receiver checks their messages
-    # - update conversation summary (last message, timestamp) Q: does the conversation summary also need to implement the websocket push?
     
     Args:
         sender_id: ID of the user sending the message
@@ -181,10 +171,10 @@ def send_message(sender_id: int, receiver_id: int, content: str):
             conversation_id=new_message.conversation_id,
             sender_id=new_message.sender_id,
             receiver_id=new_message.receiver_id,
-            content=new_message.raw_content,  # Map raw_content to content
+            content=new_message.raw_content,
             status=moderation_status_map.get(new_message.moderation_status, MessageStatus.allowed),
             delivery_status=delivery_status_map.get(new_message.delivery_status, DeliveryStatus.sent),
-            created_at=new_message.timestamp  # Map timestamp to created_at
+            created_at=new_message.timestamp 
         )
         
     except HTTPException:
