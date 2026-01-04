@@ -46,66 +46,66 @@ const LoginScreen = () => {
         >
           <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
-      {/* Header Section */}
-      <View>
-        <Image
-          source={require("@/assets/images/FILTalk Header Logo.png")}
-          accessibilityLabel="FILTalk"
-          style={styles.headerLogo}
-        />
-      </View>
+          {/* Header Section */}
+          <View>
+            <Image
+              source={require("@/assets/images/FILTalk Header Logo.png")}
+              accessibilityLabel="FILTalk"
+              style={styles.headerLogo}
+            />
+          </View>
 
-      {/* Login Section */}
-      <Text style={styles.loginText}>Login</Text>
+          {/* Login Section */}
+          <Text style={styles.loginText}>Login</Text>
 
-      <View style={styles.formSection}>
-        <Text style={styles.labelText}>Email or Number</Text>
-        <TextInput
-          style={styles.inputField}
-          value={emailOrNumber}
-          onChangeText={setEmailOrNumber}
-          placeholder="Email or Number"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="email-address"
-        />
-        <Text style={styles.labelText}>Password</Text>
-        <TextInput
-          style={styles.inputField}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor="#9E9E9E"
-          secureTextEntry
-        />
-        <Text
-          style={styles.forgotPass}
-          onPress={() => console.log("Forgot password pressed")}
-        >
-          Forgot Password?
-        </Text>
-      </View>
+          <View style={styles.formSection}>
+            <Text style={styles.labelText}>Email or Number</Text>
+            <TextInput
+              style={styles.inputField}
+              value={emailOrNumber}
+              onChangeText={setEmailOrNumber}
+              placeholder="Email or Number"
+              placeholderTextColor="#9E9E9E"
+              keyboardType="email-address"
+            />
+            <Text style={styles.labelText}>Password</Text>
+            <TextInput
+              style={styles.inputField}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry
+            />
+            <Text
+              style={styles.forgotPass}
+              onPress={() => console.log("Forgot password pressed")}
+            >
+              Forgot Password?
+            </Text>
+          </View>
 
-      {/* Buttons Section */}
-      <View>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.loginButton]}
-          onPress={handleLogin}
-        >
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.cancelButton]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <Text
-          style={styles.createAcc}
-          onPress={() => router.push("./register")}
-        >
-          Create Account
-        </Text>
-      </View>
+          {/* Buttons Section */}
+          <View>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.loginButton]}
+              onPress={handleLogin}
+            >
+              <Text style={styles.buttonText}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.cancelButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text
+              style={styles.createAcc}
+              onPress={() => router.push("./register")}
+            >
+              Create Account
+            </Text>
+          </View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </SafeAreaView>

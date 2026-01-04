@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -10,52 +10,65 @@ import {
   Image,
   TextInput,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Fonts } from '@/constants/theme';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Fonts } from "@/constants/theme";
 
 const EditProfileScreen = () => {
   const router = useRouter();
 
   // Profile state - will be populated with current user data
   const [profileData, setProfileData] = useState({
-    name: 'Enter your name',
-    email: 'Enter your email',
-    phone: 'Enter your phone number',
-    profileImage: null as string | null
+    name: "Enter your name",
+    email: "Enter your email",
+    phone: "Enter your phone number",
+    profileImage: null as string | null,
   });
 
   const handleImagePicker = async () => {
     // Request permission
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera roll is required!"
+      );
       return;
     }
 
     // Show options to user
-    Alert.alert(
-      'Select Image',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => { openCamera(); } },
-        { text: 'Gallery', onPress: () => { openGallery(); } },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert("Select Image", "Choose an option", [
+      {
+        text: "Camera",
+        onPress: () => {
+          openCamera();
+        },
+      },
+      {
+        text: "Gallery",
+        onPress: () => {
+          openGallery();
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera is required!"
+      );
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: 'images',
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -68,7 +81,7 @@ const EditProfileScreen = () => {
 
   const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -81,12 +94,12 @@ const EditProfileScreen = () => {
 
   const handleSave = () => {
     // Save changes to backend with image upload
-    console.log('Saving profile changes:', profileData);
+    console.log("Saving profile changes:", profileData);
 
     Alert.alert(
-      'Profile Updated',
-      'Your profile has been updated successfully!',
-      [{ text: 'OK', onPress: () => router.back() }]
+      "Profile Updated",
+      "Your profile has been updated successfully!",
+      [{ text: "OK", onPress: () => router.back() }]
     );
   };
 
@@ -118,7 +131,7 @@ const EditProfileScreen = () => {
               />
             ) : (
               <Image
-                source={require('@/assets/images/account.png')}
+                source={require("@/assets/images/account.png")}
                 style={styles.defaultProfileImage}
               />
             )}
@@ -135,7 +148,9 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.name}
-              onChangeText={(text) => setProfileData({ ...profileData, name: text })}
+              onChangeText={(text) =>
+                setProfileData({ ...profileData, name: text })
+              }
               placeholder="Enter your name"
               placeholderTextColor="#999"
             />
@@ -146,7 +161,9 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.email}
-              onChangeText={(text) => setProfileData({ ...profileData, email: text })}
+              onChangeText={(text) =>
+                setProfileData({ ...profileData, email: text })
+              }
               placeholder="Enter your email"
               placeholderTextColor="#999"
               keyboardType="email-address"
@@ -159,7 +176,9 @@ const EditProfileScreen = () => {
             <TextInput
               style={styles.textInput}
               value={profileData.phone}
-              onChangeText={(text) => setProfileData({ ...profileData, phone: text })}
+              onChangeText={(text) =>
+                setProfileData({ ...profileData, phone: text })
+              }
               placeholder="Enter your phone number"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
@@ -174,58 +193,58 @@ const EditProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: "bold",
+    color: "#000",
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: Fonts.regular,
   },
   headerSide: {
     minWidth: 60,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   headerSideRight: {
     minWidth: 60,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   cancelButton: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     fontFamily: Fonts.regular,
   },
   saveButton: {
     fontSize: 16,
-    color: '#f6ca15',
-    fontWeight: '600',
+    color: "#f6ca15",
+    fontWeight: "600",
     fontFamily: Fonts.regular,
   },
   profilePictureSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 30,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#E8E8E8',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E8E8E8",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 15,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 3,
-    borderColor: '#f6ca15',
+    borderColor: "#f6ca15",
   },
   profileImageStyle: {
     width: 120,
@@ -235,12 +254,12 @@ const styles = StyleSheet.create({
   defaultProfileImage: {
     width: 60,
     height: 60,
-    tintColor: '#999',
+    tintColor: "#999",
   },
   changePhotoText: {
     fontSize: 16,
-    color: '#f6ca15',
-    fontWeight: '600',
+    color: "#f6ca15",
+    fontWeight: "600",
     fontFamily: Fonts.regular,
   },
   formSection: {
@@ -251,20 +270,20 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
     marginBottom: 8,
     fontFamily: Fonts.regular,
   },
   textInput: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
-    color: '#000',
+    borderColor: "#E8E8E8",
+    color: "#000",
     fontFamily: Fonts.regular,
   },
 });

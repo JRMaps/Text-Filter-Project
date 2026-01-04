@@ -66,88 +66,91 @@ const RegisterScreen = () => {
         >
           <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
-      {/* Header Section */}
-      <View>
-        <Image
-          source={require("@/assets/images/FILTalk Header Logo.png")}
-          accessibilityLabel="FILTalk"
-          style={styles.headerLogo}
-        />
-      </View>
+          {/* Header Section */}
+          <View>
+            <Image
+              source={require("@/assets/images/FILTalk Header Logo.png")}
+              accessibilityLabel="FILTalk"
+              style={styles.headerLogo}
+            />
+          </View>
 
-      {/* Register Section */}
-      <Text style={styles.registerText}>Create Account</Text>
+          {/* Register Section */}
+          <Text style={styles.registerText}>Create Account</Text>
 
-      <View style={styles.formSection}>
-        <Text style={styles.labelText}>Full Name</Text>
-        <TextInput
-          style={styles.inputField}
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter your full name"
-          placeholderTextColor="#9E9E9E"
-        />
+          <View style={styles.formSection}>
+            <Text style={styles.labelText}>Full Name</Text>
+            <TextInput
+              style={styles.inputField}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your full name"
+              placeholderTextColor="#9E9E9E"
+            />
 
-        <Text style={styles.labelText}>Email</Text>
-        <TextInput
-          style={styles.inputField}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Enter your email"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+            <Text style={styles.labelText}>Email</Text>
+            <TextInput
+              style={styles.inputField}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter your email"
+              placeholderTextColor="#9E9E9E"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-        <Text style={styles.labelText}>Phone Number</Text>
-        <TextInput
-          style={styles.inputField}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="Enter your phone number"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="phone-pad"
-        />
+            <Text style={styles.labelText}>Phone Number</Text>
+            <TextInput
+              style={styles.inputField}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="Enter your phone number"
+              placeholderTextColor="#9E9E9E"
+              keyboardType="phone-pad"
+            />
 
-        <Text style={styles.labelText}>Password</Text>
-        <TextInput
-          style={styles.inputField}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Enter password"
-          placeholderTextColor="#9E9E9E"
-          secureTextEntry
-        />
+            <Text style={styles.labelText}>Password</Text>
+            <TextInput
+              style={styles.inputField}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Enter password"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry
+            />
 
-        <Text style={styles.labelText}>Confirm Password</Text>
-        <TextInput
-          style={styles.inputField}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="Confirm your password"
-          placeholderTextColor="#9E9E9E"
-          secureTextEntry
-        />
-      </View>
+            <Text style={styles.labelText}>Confirm Password</Text>
+            <TextInput
+              style={styles.inputField}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm your password"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry
+            />
+          </View>
 
-      {/* Buttons Section */}
-      <View style={styles.buttonSection}>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.registerButton]}
-          onPress={handleRegister}
-        >
-          <Text style={styles.buttonText}>Register</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.cancelButton]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.loginLink} onPress={() => router.push("./login")}>
-          Already have an account? Login
-        </Text>
-      </View>
+          {/* Buttons Section */}
+          <View style={styles.buttonSection}>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.registerButton]}
+              onPress={handleRegister}
+            >
+              <Text style={styles.buttonText}>Register</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.cancelButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text
+              style={styles.loginLink}
+              onPress={() => router.push("./login")}
+            >
+              Already have an account? Login
+            </Text>
+          </View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </SafeAreaView>
