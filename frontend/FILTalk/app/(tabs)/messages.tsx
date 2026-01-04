@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
+import { Fonts } from '@/constants/theme';
 
 // Sample messages data - will be replaced with backend data
 const sampleMessages = [
@@ -124,6 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#f6ca15',
+    fontFamily: Fonts.regular,
   },
   composeButton: {
     backgroundColor: '#f6ca15',
@@ -177,10 +179,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
+    fontFamily: Fonts.regular,
   },
   messageTime: {
     fontSize: 12,
     color: '#999',
+    fontFamily: Fonts.regular,
   },
   messagePreview: {
     flexDirection: 'row',
@@ -192,10 +196,12 @@ const styles = StyleSheet.create({
     color: '#666',
     flex: 1,
     marginRight: 10,
+    fontFamily: Fonts.regular,
   },
   unreadMessage: {
     fontWeight: '600',
     color: '#000',
+    fontFamily: Fonts.regular,
   },
   unreadBadge: {
     backgroundColor: '#f6ca15',
@@ -210,6 +216,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#000',
+    fontFamily: Fonts.regular,
   },
 });
 

@@ -10,6 +10,7 @@ import {
   ScrollView,
   Image,
 } from "react-native";
+import { Fonts } from "@/constants/theme";
 
 const AccountScreen = () => {
   const router = useRouter();
@@ -153,6 +154,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: "#f6ca15",
+    fontFamily: Fonts.regular,
   },
   editButton: {
     backgroundColor: "#f6ca15",
@@ -164,6 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#000",
+    fontFamily: Fonts.regular,
   },
   profileSection: {
     flexDirection: "row",
@@ -208,15 +211,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
     marginBottom: 4,
+    fontFamily: Fonts.regular,
   },
   profileEmail: {
     fontSize: 14,
     color: "#999",
     marginBottom: 2,
+    fontFamily: Fonts.regular,
   },
   profilePhone: {
     fontSize: 14,
     color: "#999",
+    fontFamily: Fonts.regular,
   },
   settingsCard: {
     backgroundColor: "#eeeded",
@@ -256,11 +262,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#000",
+    fontFamily: Fonts.regular,
   },
   chevron: {
     fontSize: 28,
     color: "#666",
     fontWeight: "300",
+    fontFamily: Fonts.regular,
   },
   logoutButton: {
     backgroundColor: "#cd1127",
@@ -274,6 +282,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+    fontFamily: Fonts.regular,
   },
   bottomSpacer: {
     height: 40,

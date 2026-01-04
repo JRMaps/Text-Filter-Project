@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useContact, ContactData } from "@/context/ContactContext";
+import { Fonts } from "@/constants/theme";
 
 const EditContactScreen = () => {
   const router = useRouter();
@@ -226,6 +227,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#666",
     marginBottom: 20,
+    fontFamily: Fonts.regular,
   },
   backButtonEmpty: {
     backgroundColor: "#f6ca15",
@@ -237,6 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#000",
+    fontFamily: Fonts.regular,
   },
   header: {
     flexDirection: "row",
@@ -258,6 +261,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "900",
     color: "#000",
+    fontFamily: Fonts.regular,
   },
   saveButton: {
     backgroundColor: "#f6ca15",
@@ -269,6 +273,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     color: "#0039a9",
+    fontFamily: Fonts.regular,
   },
   profilePictureSection: {
     alignItems: "center",
@@ -329,6 +334,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: "#666",
+    fontFamily: Fonts.regular,
   },
   formSection: {
     paddingHorizontal: 20,
@@ -341,6 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#000",
     marginBottom: 8,
+    fontFamily: Fonts.regular,
   },
   input: {
     backgroundColor: "#FFF",
@@ -351,6 +358,7 @@ const styles = StyleSheet.create({
     color: "#000",
     borderWidth: 1,
     borderColor: "#E8E8E8",
+    fontFamily: Fonts.regular,
   },
 });
 

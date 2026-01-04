@@ -1,15 +1,16 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { Tabs } from "expo-router";
+import React from "react";
+import { Image, StyleSheet } from "react-native";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HapticTab } from "@/components/haptic-tab";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Fonts } from "@/constants/theme";
 
 // FILTalk brand colors
 const FILTalkColors = {
-  primary: '#f6ca15', // Yellow accent
-  inactive: '#666',
-  background: '#F5F5F5',
+  primary: "#f6ca15", // Yellow accent
+  inactive: "#666",
+  background: "#F5F5F5",
 };
 
 export default function TabLayout() {
@@ -23,10 +24,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: "#fff",
           borderTopWidth: 0,
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
@@ -36,17 +37,19 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: "500",
+          fontFamily: Fonts.regular,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="contacts"
         options={{
-          title: 'Contacts',
+          title: "Contacts",
           tabBarIcon: ({ color }) => (
-            <Image 
-              source={require('@/assets/images/contacts.png')} 
-              style={[styles.tabIcon, { tintColor: color }]} 
+            <Image
+              source={require("@/assets/images/contacts.png")}
+              style={[styles.tabIcon, { tintColor: color }]}
             />
           ),
         }}
@@ -54,11 +57,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: "Messages",
           tabBarIcon: ({ color }) => (
-            <Image 
-              source={require('@/assets/images/messages.png')} 
-              style={[styles.tabIcon, { tintColor: color }]} 
+            <Image
+              source={require("@/assets/images/messages.png")}
+              style={[styles.tabIcon, { tintColor: color }]}
             />
           ),
         }}
@@ -66,11 +69,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Account',
+          title: "Account",
           tabBarIcon: ({ color }) => (
-            <Image 
-              source={require('@/assets/images/account.png')} 
-              style={[styles.tabIcon, { tintColor: color }]} 
+            <Image
+              source={require("@/assets/images/account.png")}
+              style={[styles.tabIcon, { tintColor: color }]}
             />
           ),
         }}
@@ -90,6 +93,6 @@ const styles = StyleSheet.create({
   tabIcon: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
 });

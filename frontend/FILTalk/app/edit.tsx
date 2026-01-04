@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Fonts } from '@/constants/theme';
 
 const EditProfileScreen = () => {
   const router = useRouter();
@@ -189,6 +190,7 @@ const styles = StyleSheet.create({
     color: '#000',
     flex: 1,
     textAlign: 'center',
+    fontFamily: Fonts.regular,
   },
   headerSide: {
     minWidth: 60,
@@ -201,11 +203,13 @@ const styles = StyleSheet.create({
   cancelButton: {
     fontSize: 16,
     color: '#666',
+    fontFamily: Fonts.regular,
   },
   saveButton: {
     fontSize: 16,
     color: '#f6ca15',
     fontWeight: '600',
+    fontFamily: Fonts.regular,
   },
   profilePictureSection: {
     alignItems: 'center',
@@ -237,6 +241,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f6ca15',
     fontWeight: '600',
+    fontFamily: Fonts.regular,
   },
   formSection: {
     paddingHorizontal: 20,
@@ -249,6 +254,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     marginBottom: 8,
+    fontFamily: Fonts.regular,
   },
   textInput: {
     backgroundColor: '#FFF',
@@ -259,6 +265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     color: '#000',
+    fontFamily: Fonts.regular,
   },
 });
 

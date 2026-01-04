@@ -11,6 +11,7 @@ import {
   Image,
 } from "react-native";
 import { useContact } from "@/context/ContactContext";
+import { Fonts } from "@/constants/theme";
 
 const ContactProfileScreen = () => {
   const router = useRouter();
@@ -139,6 +140,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#666",
     marginBottom: 20,
+    fontFamily: Fonts.regular,
   },
   backButtonEmpty: {
     backgroundColor: "#f6ca15",
@@ -150,6 +152,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#000",
+    fontFamily: Fonts.regular,
   },
   header: {
     flexDirection: "row",
@@ -177,6 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     color: "#0039a9",
+    fontFamily: Fonts.regular,
   },
   profileSection: {
     flexDirection: "column",
@@ -230,10 +234,12 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
     marginBottom: 4,
+    fontFamily: Fonts.regular,
   },
   statusText: {
     fontSize: 14,
     color: "#666",
+    fontFamily: Fonts.regular,
   },
   onlineStatus: {
     color: "#4CAF50",
@@ -272,6 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#000",
     fontWeight: "800",
+    fontFamily: Fonts.regular,
   },
   detailsCard: {
     backgroundColor: "#FFF",
@@ -298,10 +305,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
     marginBottom: 4,
+    fontFamily: Fonts.regular,
   },
   detailValue: {
     fontSize: 15,
     color: "#666",
+    fontFamily: Fonts.regular,
   },
 });
 

@@ -3,14 +3,18 @@ import React, { useState } from "react";
 import {
   Alert,
   Image,
+  Keyboard,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Fonts } from "@/constants/theme";
 
 const LoginScreen = () => {
   const [emailOrNumber, setEmailOrNumber] = useState("");
@@ -34,7 +38,13 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
       {/* Header Section */}
       <View>
@@ -96,6 +106,8 @@ const LoginScreen = () => {
           Create Account
         </Text>
       </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -103,17 +115,19 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   headerLogo: {
     color: "#000000",
-    width: 400,
+    width: 350,
     height: 160,
     resizeMode: "contain",
     alignSelf: "flex-start",
     marginTop: -30,
-    marginBottom: 0,
+    marginBottom: 35,
   },
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
-    justifyContent: "flex-start",
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: "center",
     paddingTop: 0,
   },
@@ -131,32 +145,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 20,
     backgroundColor: "#fff",
+    fontFamily: Fonts.regular,
+    fontSize: 18,
   },
   loginText: {
-    fontSize: 25,
+    fontSize: 35,
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 20,
+    marginTop: -40,
+    marginBottom: 70,
+    fontFamily: Fonts.regular,
   },
   labelText: {
     color: "#545454",
-    fontSize: 15,
+    fontSize: 21,
     fontWeight: "900",
     textAlign: "left",
     alignSelf: "flex-start",
     marginBottom: 15,
+    fontFamily: Fonts.regular,
   },
   forgotPass: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: "900",
     color: "#0039a9",
     textAlign: "left",
     alignSelf: "flex-start",
     marginBottom: 50,
     textDecorationLine: "underline",
+    fontFamily: Fonts.regular,
   },
   buttonBase: {
-    width: 250,
+    width: 180,
     height: 50,
     justifyContent: "center",
     alignItems: "center",
@@ -174,16 +194,19 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "900",
+    fontFamily: Fonts.regular,
   },
   createAcc: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "900",
     color: "#0039a9",
     alignSelf: "center",
     marginBottom: 100,
+    marginLeft: 5,
     textDecorationLine: "underline",
+    fontFamily: Fonts.regular,
   },
 });
 
