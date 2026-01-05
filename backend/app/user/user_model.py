@@ -28,8 +28,7 @@ class User(Base):
         back_populates="sender"
     )
 
-    received_messages = relationship(
-        "Message",
-        foreign_keys="[Message.receiver_id]",
-        back_populates="receiver"
+    message_receipts = relationship(
+        "MessageReceipt",
+        back_populates="user"
     )

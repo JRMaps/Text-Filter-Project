@@ -4,7 +4,8 @@ from backend.app.websocket.ws_auth import get_user_from_websocket
 from backend.app.websocket.ws_helpers import get_user_contact_ids
 from backend.app.database.database import SessionLocal
 from backend.app.message.message_service import send_message
-from backend.app.message.message_model import Message, DeliveryStatus as ModelDeliveryStatus
+from backend.app.message.message_model import Message
+from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation
 from datetime import datetime
 
@@ -47,20 +48,20 @@ async def ws_chat(websocket: WebSocket):
 
             if event == "message:new":
                 # Send a new message
-                receiver_id = payload.get("receiver_id")
+                conversation_id = payload.get("conversation_id")
                 content = payload.get("content")
                 
-                if not receiver_id or not content:
+                if not conversation_id or not content:
                     await websocket.send_json({
                         "type": "error",
-                        "payload": {"message": "receiver_id and content are required"}
+                        "payload": {"message": "conversation_id and content are required"}
                     })
                     continue
                 
                 try:
                     message = send_message(
                         sender_id=current_user.id,
-                        receiver_id=receiver_id,
+                        conversation_id=conversation_id,
                         content=content
                     )
 
@@ -70,6 +71,31 @@ async def ws_chat(websocket: WebSocket):
                         conversation = db.query(Conversation).filter(
                             Conversation.id == message.conversation_id
                         ).first()
+                        
+                        if not conversation:
+                            await websocket.send_json({
+                                "type": "error",
+                                "payload": {"message": "Conversation not found"}
+                            })
+                            continue
+                        
+                        # Get participant IDs
+                        participant_ids = [p.id for p in conversation.participants]
+                        
+                        # Get receipts for the message
+                        receipts = db.query(MessageReceipt).filter(
+                            MessageReceipt.message_id == message.id
+                        ).all()
+                        
+                        receipt_data = [
+                            {
+                                "user_id": receipt.user_id,
+                                "delivery_status": receipt.delivery_status.value,
+                                "delivered_at": receipt.delivered_at.isoformat() if receipt.delivered_at else None,
+                                "read_at": receipt.read_at.isoformat() if receipt.read_at else None
+                            }
+                            for receipt in receipts
+                        ]
                         
                         # Build dashboard update payload
                         dashboard_update = {
@@ -83,10 +109,7 @@ async def ws_chat(websocket: WebSocket):
                     finally:
                         db.close()
 
-                    # Broadcast to conversation participants
-                    participant_ids = [current_user.id, receiver_id]
-                    
-                    # Send new message event
+                    # Send new message event to all participants
                     await manager.send_to_conversation(
                         participant_ids=participant_ids,
                         payload={
@@ -95,10 +118,9 @@ async def ws_chat(websocket: WebSocket):
                                 "id": message.id,
                                 "conversation_id": message.conversation_id,
                                 "sender_id": message.sender_id,
-                                "receiver_id": message.receiver_id,
                                 "content": message.content,
                                 "status": message.status.value,
-                                "delivery_status": message.delivery_status.value,
+                                "receipts": receipt_data,
                                 "created_at": message.created_at.isoformat()
                             }
                         }
@@ -135,31 +157,46 @@ async def ws_chat(websocket: WebSocket):
                         })
                         continue
                     
-                    # Only receiver can mark as delivered
-                    if message.receiver_id != current_user.id:
+                    # Get receipt for current user
+                    receipt = db.query(MessageReceipt).filter(
+                        MessageReceipt.message_id == message_id,
+                        MessageReceipt.user_id == current_user.id
+                    ).first()
+                    
+                    if not receipt:
                         await websocket.send_json({
                             "type": "error",
-                            "payload": {"message": "Unauthorized"}
+                            "payload": {"message": "Receipt not found or unauthorized"}
                         })
                         continue
                     
                     # Update delivery status
-                    if message.delivery_status != ModelDeliveryStatus.DELIVERED:
-                        message.delivery_status = ModelDeliveryStatus.DELIVERED
+                    if receipt.delivery_status != ReceiptDeliveryStatus.DELIVERED:
+                        receipt.delivery_status = ReceiptDeliveryStatus.DELIVERED
+                        receipt.delivered_at = datetime.utcnow()
                         db.commit()
                         
-                        # Notify sender
-                        await manager.send_to_user(
-                            message.sender_id,
-                            {
-                                "type": "message:delivery_status",
-                                "payload": {
-                                    "message_id": message.id,
-                                    "delivery_status": "delivered",
-                                    "timestamp": datetime.utcnow().isoformat()
+                        # Get conversation participants
+                        conversation = db.query(Conversation).filter(
+                            Conversation.id == message.conversation_id
+                        ).first()
+                        
+                        if conversation:
+                            participant_ids = [p.id for p in conversation.participants]
+                            
+                            # Notify all participants about delivery status update
+                            await manager.send_to_conversation(
+                                participant_ids=participant_ids,
+                                payload={
+                                    "type": "message:delivery_status",
+                                    "payload": {
+                                        "message_id": message.id,
+                                        "user_id": current_user.id,
+                                        "delivery_status": "delivered",
+                                        "timestamp": receipt.delivered_at.isoformat()
+                                    }
                                 }
-                            }
-                        )
+                            )
                 finally:
                     db.close()
             
@@ -183,31 +220,49 @@ async def ws_chat(websocket: WebSocket):
                         })
                         continue
                     
-                    # Only receiver can mark as read
-                    if message.receiver_id != current_user.id:
+                    # Get receipt for current user
+                    receipt = db.query(MessageReceipt).filter(
+                        MessageReceipt.message_id == message_id,
+                        MessageReceipt.user_id == current_user.id
+                    ).first()
+                    
+                    if not receipt:
                         await websocket.send_json({
                             "type": "error",
-                            "payload": {"message": "Unauthorized"}
+                            "payload": {"message": "Receipt not found or unauthorized"}
                         })
                         continue
                     
                     # Update delivery status
-                    if message.delivery_status != ModelDeliveryStatus.READ:
-                        message.delivery_status = ModelDeliveryStatus.READ
+                    if receipt.delivery_status != ReceiptDeliveryStatus.READ:
+                        receipt.delivery_status = ReceiptDeliveryStatus.READ
+                        receipt.read_at = datetime.utcnow()
+                        # Also update delivered_at if not already set
+                        if not receipt.delivered_at:
+                            receipt.delivered_at = receipt.read_at
                         db.commit()
                         
-                        # Notify sender
-                        await manager.send_to_user(
-                            message.sender_id,
-                            {
-                                "type": "message:delivery_status",
-                                "payload": {
-                                    "message_id": message.id,
-                                    "delivery_status": "read",
-                                    "timestamp": datetime.utcnow().isoformat()
+                        # Get conversation participants
+                        conversation = db.query(Conversation).filter(
+                            Conversation.id == message.conversation_id
+                        ).first()
+                        
+                        if conversation:
+                            participant_ids = [p.id for p in conversation.participants]
+                            
+                            # Notify all participants about read status update
+                            await manager.send_to_conversation(
+                                participant_ids=participant_ids,
+                                payload={
+                                    "type": "message:delivery_status",
+                                    "payload": {
+                                        "message_id": message.id,
+                                        "user_id": current_user.id,
+                                        "delivery_status": "read",
+                                        "timestamp": receipt.read_at.isoformat()
+                                    }
                                 }
-                            }
-                        )
+                            )
                 finally:
                     db.close()
             

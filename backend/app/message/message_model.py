@@ -4,11 +4,6 @@ from datetime import datetime
 from enum import Enum
 from backend.app.database.database import Base
 
-class DeliveryStatus(str, Enum):
-    SENT = "sent"
-    DELIVERED = "delivered"
-    READ = "read"
-
 class ModerationStatus(str, Enum):
     ALLOWED = "allowed"
     MASKED = "masked"
@@ -27,7 +22,6 @@ class Message(Base):
     )
 
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     raw_content = Column(Text, nullable=False)
     normalized_content = Column(Text)
@@ -37,12 +31,6 @@ class Message(Base):
         SQLEnum(ModerationStatus),
         default=ModerationStatus.ALLOWED
     ) 
-
-    # Delivery tracking status
-    delivery_status = Column(
-        SQLEnum(DeliveryStatus), 
-        default=DeliveryStatus.SENT
-    )
 
     severity_score = Column(Integer)
     matched_layers = Column(JSON)
@@ -56,13 +44,13 @@ class Message(Base):
         back_populates="sent_messages"
     )
 
-    receiver = relationship(
-        "User",
-        foreign_keys=[receiver_id],
-        back_populates="received_messages"
-    )
-
     conversation = relationship(
         "Conversation",
         back_populates="messages"
+    )
+
+    receipts = relationship(
+        "MessageReceipt",
+        back_populates="message",
+        cascade="all, delete-orphan"
     )

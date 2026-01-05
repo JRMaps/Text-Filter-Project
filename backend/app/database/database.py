@@ -33,6 +33,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Import all models to ensure they're registered with Base
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message
+from backend.app.message.message_receipt_model import MessageReceipt
 from backend.app.conversation.conversation_model import Conversation
 from backend.app.contact.contact_model import Contact
 
