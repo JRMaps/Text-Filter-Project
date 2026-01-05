@@ -1,50 +1,60 @@
-from tokenizer import tokenize
-class Parser:
-    def __init__(self, tokens): # Initialize with a list of tokens
+class Parser: # A simple recursive descent parser for offensive content
+    def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
-        self.offensive_spans = [] # List to hold spans of offensive sequences
+        self.offensive_spans = []
 
-    def current(self): # Get the current token
+    def current(self): # returns current token or None
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]
         return None
 
-    def match(self, token_type): # Match and consume a token of a specific type
+    def match(self, token_type): # returns token if matches, else None
         if self.current() and self.current()[0] == token_type:
             token = self.current()
             self.pos += 1
             return token
         return None
 
-    def parse(self): # Main parse function to find offensive sequences
+    def parse(self): # returns (accepted: bool, offensive_spans: list)
         while self.pos < len(self.tokens):
             start = self.pos
-            if self.O():
-                self.offensive_spans.append((start, self.pos))
+            offensive_type = self.O()
+            if offensive_type:
+                self.offensive_spans.append((start, self.pos, offensive_type))
             else:
-                self.pos += 1  # move forward if no match
+                self.pos += 1
         return len(self.offensive_spans) > 0, self.offensive_spans
 
-    # Grammar Rules
+    # Grammar Rules: O → OFFENSIVE PRONOUN | OFFENSIVE OFFENSIVE | OFFENSIVE
     def O(self):
-        return (
-            self.single_offensive() or
-            self.repeated_offensive() or
-            self.offensive_pronoun()
-        )
+        start = self.pos
 
-    def single_offensive(self): # Match a single offensive token
+        if self.offensive_pronoun():
+            return "pronoun"
+
+        self.pos = start
+        if self.repeated_offensive():
+            return "repeated"
+
+        self.pos = start
+        if self.single_offensive():
+            return "single"
+
+        self.pos = start
+        return None
+
+    def single_offensive(self):
         return self.match("OFFENSIVE") is not None
 
-    def repeated_offensive(self): # Match two consecutive offensive tokens
+    def repeated_offensive(self):
         start = self.pos
         if self.match("OFFENSIVE") and self.match("OFFENSIVE"):
             return True
         self.pos = start
         return False
 
-    def offensive_pronoun(self): # Match an offensive token followed by a pronoun
+    def offensive_pronoun(self):
         start = self.pos
         if self.match("OFFENSIVE") and self.match("PRONOUN"):
             return True
