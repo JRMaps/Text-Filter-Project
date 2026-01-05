@@ -19,6 +19,7 @@ class MessageBase(BaseModel):
 
 class MessageCreate(MessageBase):
     conversation_id: int
+    receiver_id: Optional[int] = None  # Optional if conversation_id is provided
 
 class MessageReceiptRead(BaseModel):
     user_id: int

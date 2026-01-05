@@ -18,6 +18,7 @@ async def api_send_message(
     response = send_message(
         sender_id=current_user.id,
         conversation_id=request.conversation_id,
+        receiver_id=request.receiver_id,
         content=request.content
     )
     return response
