@@ -27,7 +27,6 @@ class Message(Base):
     )
 
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     raw_content = Column(Text, nullable=False)
     normalized_content = Column(Text)
@@ -37,12 +36,6 @@ class Message(Base):
         SQLEnum(ModerationStatus),
         default=ModerationStatus.ALLOWED
     ) 
-
-    # Delivery tracking status
-    delivery_status = Column(
-        SQLEnum(DeliveryStatus), 
-        default=DeliveryStatus.SENT
-    )
 
     severity_score = Column(Integer)
     matched_layers = Column(JSON)
@@ -54,12 +47,6 @@ class Message(Base):
         "User",
         foreign_keys=[sender_id],
         back_populates="sent_messages"
-    )
-
-    receiver = relationship(
-        "User",
-        foreign_keys=[receiver_id],
-        back_populates="received_messages"
     )
 
     conversation = relationship(
