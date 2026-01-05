@@ -4,11 +4,6 @@ from datetime import datetime
 from enum import Enum
 from backend.app.database.database import Base
 
-class DeliveryStatus(str, Enum):
-    SENT = "sent"
-    DELIVERED = "delivered"
-    READ = "read"
-
 class ModerationStatus(str, Enum):
     ALLOWED = "allowed"
     MASKED = "masked"
@@ -52,4 +47,10 @@ class Message(Base):
     conversation = relationship(
         "Conversation",
         back_populates="messages"
+    )
+
+    receipts = relationship(
+        "MessageReceipt",
+        back_populates="message",
+        cascade="all, delete-orphan"
     )

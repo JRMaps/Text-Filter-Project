@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional, List
 
 class MessageStatus(str, Enum):
     allowed = "allowed"
@@ -17,17 +18,25 @@ class MessageBase(BaseModel):
     content: str
 
 class MessageCreate(MessageBase):
-    receiver_id: int
+    conversation_id: int
+
+class MessageReceiptRead(BaseModel):
+    user_id: int
+    delivery_status: DeliveryStatus
+    delivered_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
 
 # Websocket output
 class MessageRead(MessageBase):
     id: int
     conversation_id: int
     sender_id: int
-    receiver_id: int
     status: MessageStatus
-    delivery_status: DeliveryStatus
     created_at: datetime
+    receipts: Optional[List[MessageReceiptRead]] = None
 
     class Config:
         from_attributes = True

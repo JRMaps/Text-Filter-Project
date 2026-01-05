@@ -13,12 +13,11 @@ async def api_send_message(
     current_user: User = Depends(get_current_user)
 ):
     """
-    API to send a message to another user.
-    Creates a conversation if it doesn't exist.
+    API to send a message to a conversation.
     """
     response = send_message(
         sender_id=current_user.id,
-        receiver_id=request.receiver_id,
+        conversation_id=request.conversation_id,
         content=request.content
     )
     return response
