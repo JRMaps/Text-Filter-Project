@@ -11,6 +11,7 @@ import {
   Image,
 } from "react-native";
 import { useContact, ContactData } from "@/context/ContactContext";
+import { Fonts } from "@/constants/theme";
 
 const ContactsScreen = () => {
   const router = useRouter();
@@ -93,6 +94,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: "#f6ca15",
+    fontFamily: Fonts.regular,
   },
   addButton: {
     backgroundColor: "#f6ca15",
@@ -107,6 +109,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
     marginTop: -2,
+    fontFamily: Fonts.regular,
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -147,10 +150,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
     marginBottom: 2,
+    fontFamily: Fonts.regular,
   },
   contactStatus: {
     fontSize: 13,
     color: "#999",
+    fontFamily: Fonts.regular,
   },
   onlineStatus: {
     color: "#4CAF50",
