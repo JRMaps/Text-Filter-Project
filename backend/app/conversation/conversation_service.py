@@ -3,10 +3,11 @@ from fastapi import HTTPException, status
 from typing import List
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.message.message_model import Message, ModerationStatus, DeliveryStatus as ModelDeliveryStatus
+from backend.app.message.message_model import Message, ModerationStatus
+from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
-from backend.app.message.message_schema import MessageRead, MessageStatus, DeliveryStatus
+from backend.app.message.message_schema import MessageRead, MessageStatus, MessageReceiptRead, DeliveryStatus
 from backend.app.user.user_schema import UserRead
 from backend.app.conversation.conversation_schema import ConversationType
 
@@ -146,12 +147,12 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
-        
+
         # Get all messages for this conversation, sorted by timestamp
         messages = db.query(Message).filter(
             Message.conversation_id == conversation_id
         ).order_by(Message.timestamp.asc()).all()
-        
+
         # Map moderation_status enum to MessageStatus schema enum
         moderation_status_map = {
             ModerationStatus.ALLOWED: MessageStatus.allowed,
@@ -160,27 +161,42 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
             ModerationStatus.FLAGGED: MessageStatus.flagged,
         }
         
-        # Map delivery_status enum to DeliveryStatus schema enum
+        # Map receipt delivery_status enum to DeliveryStatus schema enum
         delivery_status_map = {
-            ModelDeliveryStatus.SENT: DeliveryStatus.sent,
-            ModelDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
-            ModelDeliveryStatus.READ: DeliveryStatus.read,
+            ReceiptDeliveryStatus.SENT: DeliveryStatus.sent,
+            ReceiptDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
+            ReceiptDeliveryStatus.READ: DeliveryStatus.read,
         }
         
-        # Convert messages to MessageRead schema
-        message_reads = [
-            MessageRead(
-                id=msg.id,
-                conversation_id=msg.conversation_id,
-                sender_id=msg.sender_id,
-                receiver_id=msg.receiver_id,
-                content=msg.raw_content,  # Map raw_content to content
-                status=moderation_status_map.get(msg.moderation_status, MessageStatus.allowed),
-                delivery_status=delivery_status_map.get(msg.delivery_status, DeliveryStatus.sent),
-                created_at=msg.timestamp  # Map timestamp to created_at
+        # Convert messages to MessageRead schema with receipts
+        message_reads = []
+        for msg in messages:
+            # Get receipts for this message
+            receipts = db.query(MessageReceipt).filter(
+                MessageReceipt.message_id == msg.id
+            ).all()
+            
+            receipt_reads = [
+                MessageReceiptRead(
+                    user_id=receipt.user_id,
+                    delivery_status=delivery_status_map.get(receipt.delivery_status, DeliveryStatus.sent),
+                    delivered_at=receipt.delivered_at,
+                    read_at=receipt.read_at
+                )
+                for receipt in receipts
+            ]
+            
+            message_reads.append(
+                MessageRead(
+                    id=msg.id,
+                    conversation_id=msg.conversation_id,
+                    sender_id=msg.sender_id,
+                    content=msg.raw_content,  # Map raw_content to content
+                    status=moderation_status_map.get(msg.moderation_status, MessageStatus.allowed),
+                    created_at=msg.timestamp,  # Map timestamp to created_at
+                    receipts=receipt_reads
+                )
             )
-            for msg in messages
-        ]
         
         # Build response
         return ConversationWithMessages(

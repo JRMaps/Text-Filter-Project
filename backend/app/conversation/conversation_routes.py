@@ -12,7 +12,6 @@ router = APIRouter()
 @router.get("/conversations", response_model=List[ConversationDashboardItem])
 async def api_get_all_conversations(
     current_user: User = Depends(get_current_user)
-    # add the websocket dependency here because the user logged in must have an active websocket connection
 ):
     """
     API to get all conversations for the current user.
