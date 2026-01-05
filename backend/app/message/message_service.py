@@ -8,6 +8,7 @@ from backend.app.message.message_receipt_model import MessageReceipt, DeliverySt
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.message.message_schema import MessageRead, MessageStatus, MessageReceiptRead, DeliveryStatus
 from backend.app.moderation import cfg_result_schema, normalizationV1, tokenizer, parser
+from typing import Optional
 
 def get_db():
     """Dependency to get database session."""
@@ -18,67 +19,55 @@ def get_db():
         db.close()
 
 
-def find_or_create_conversation(db: Session, sender_id: int, receiver_id: int) -> Conversation:
+def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Conversation:
     """
-    Find an existing conversation between two users, or create a new one.
-    
+    Create a new conversation between two users.
+
     Args:
         db: Database session
         sender_id: ID of the sender
         receiver_id: ID of the receiver
-        
+
     Returns:
-        Conversation: The existing or newly created conversation
+        Conversation: The newly created conversation
     """
-    # Find existing conversation where both users are participants
-    # Query conversations that have both sender and receiver as participants
-    conversations = db.query(Conversation).join(
-        conversation_participants,
-        Conversation.id == conversation_participants.c.conversation_id
-    ).filter(
-        conversation_participants.c.user_id.in_([sender_id, receiver_id])
-    ).all()
-    
-    # Filter to find conversation with exactly both users
-    for conv in conversations:
-        participant_ids = [p.id for p in conv.participants]
-        if sender_id in participant_ids and receiver_id in participant_ids and len(participant_ids) == 2:
-            return conv
-    
-    # No existing conversation found, create new one
-    
-    # Create new conversation
     sender = db.query(User).filter(User.id == sender_id).first()
     receiver = db.query(User).filter(User.id == receiver_id).first()
-    
+
     if not sender or not receiver:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sender or receiver not found"
         )
-    
+
     new_conversation = Conversation()
     db.add(new_conversation)
     db.flush()  # Get the ID
-    
+
     # Add participants
     new_conversation.participants.append(sender)
     new_conversation.participants.append(receiver)
     db.commit()
     db.refresh(new_conversation)
-    
+
     return new_conversation
 
 
-def send_message(sender_id: int, conversation_id: int, content: str):
+def send_message(
+    sender_id: int,
+    content: str,
+    conversation_id: Optional[int] = None, 
+    receiver_id: Optional[int] = None
+):
     """
     Send a message to a conversation (private or group). Creates a conversation if it doesn't exist.
-    
+
     Args:
         sender_id: ID of the user sending the message
-        conversation_id: ID of the conversation
         content: Message content
-        
+        conversation_id: ID of the conversation (optional)
+        receiver_id: ID of the receiver (optional)
+
     Returns:
         MessageRead: The created message
     """
@@ -87,17 +76,19 @@ def send_message(sender_id: int, conversation_id: int, content: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Message cannot be empty"
         )
-    
-    # ------------------------------------------------------- #
-    # CFG implementation logic here: (filter before sending)
-    # 1. Normalization
-    # 2. Tokenization
-    # 3. CFG Parsing
-    # 4. Severity Scoring
-    # 5. Decision (allow / mask / block / flag)
-    # ------------------------------------------------------- #
 
-    
+    if not conversation_id and not receiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either conversation_id or receiver_id must be provided"
+        )
+
+    if conversation_id and receiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide only one of conversation_id or receiver_id"
+        )
+
     db = SessionLocal()
     try:
         # Verify sender exists
@@ -107,15 +98,45 @@ def send_message(sender_id: int, conversation_id: int, content: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sender not found"
             )
-        
-        # Verify conversation exists
-        conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
-        if not conversation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"
-            )
-        
+
+        # Resolve conversation
+        if conversation_id:
+            conversation = db.query(Conversation).filter(
+                Conversation.id == conversation_id
+            ).first()
+
+            if not conversation:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Conversation not found"
+                )
+
+            if sender not in conversation.participants:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not a conversation participant"
+                )
+
+        else:
+            # First message (private chat)
+            receiver = db.query(User).filter(User.id == receiver_id).first()
+            if not receiver:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Receiver not found"
+                )
+            conversation = create_new_conversation(db, sender_id, receiver_id)
+
+        # Filter message through CFG (normalization, tokenization, parsing, scoring, decision)
+        # ------------------------------------------------------- #
+        # CFG implementation logic here: (filter before sending)
+        # 1. Normalization
+        # 2. Tokenization
+        # 3. CFG Parsing
+        # 4. Severity Scoring
+        # 5. Decision (allow / mask / block / flag)
+        # ------------------------------------------------------- #
+
         # Create message
         new_message = Message(
             conversation_id=conversation.id,
@@ -129,14 +150,14 @@ def send_message(sender_id: int, conversation_id: int, content: str):
             matched_rules=None,  # Will be set by CFG implementation
             timestamp=datetime.utcnow()
         )
-        
+
         db.add(new_message)
         db.flush()  # Get the message ID
-        
+
         # Update conversation metadata
         conversation.last_message_id = new_message.id
         conversation.updated_at = datetime.utcnow()
-        
+
         # Create message receipts for all participants except the sender
         for participant in conversation.participants:
             if participant.id != sender_id:
@@ -146,10 +167,10 @@ def send_message(sender_id: int, conversation_id: int, content: str):
                     delivery_status=ReceiptDeliveryStatus.SENT
                 )
                 db.add(receipt)
-        
+
         db.commit()
         db.refresh(new_message)
-        
+
         # Map moderation_status enum to MessageStatus schema enum
         moderation_status_map = {
             ModerationStatus.ALLOWED: MessageStatus.allowed,
@@ -157,19 +178,19 @@ def send_message(sender_id: int, conversation_id: int, content: str):
             ModerationStatus.BLOCKED: MessageStatus.blocked,
             ModerationStatus.FLAGGED: MessageStatus.flagged,
         }
-        
+
         # Map receipt delivery_status enum to DeliveryStatus schema enum
         delivery_status_map = {
             ReceiptDeliveryStatus.SENT: DeliveryStatus.sent,
             ReceiptDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
             ReceiptDeliveryStatus.READ: DeliveryStatus.read,
         }
-        
+
         # Get receipts for the message
         receipts = db.query(MessageReceipt).filter(
             MessageReceipt.message_id == new_message.id
         ).all()
-        
+
         receipt_reads = [
             MessageReceiptRead(
                 user_id=receipt.user_id,
@@ -179,7 +200,7 @@ def send_message(sender_id: int, conversation_id: int, content: str):
             )
             for receipt in receipts
         ]
-        
+
         return MessageRead(
             id=new_message.id,
             conversation_id=new_message.conversation_id,
@@ -189,7 +210,7 @@ def send_message(sender_id: int, conversation_id: int, content: str):
             created_at=new_message.timestamp,
             receipts=receipt_reads
         )
-        
+
     except HTTPException:
         db.rollback()
         raise
