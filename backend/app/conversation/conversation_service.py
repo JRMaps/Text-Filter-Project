@@ -6,7 +6,7 @@ from backend.app.user.user_model import User
 from backend.app.message.message_model import Message, ModerationStatus
 from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
-from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
+from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead
 from backend.app.message.message_schema import MessageRead, MessageStatus, MessageReceiptRead, DeliveryStatus
 from backend.app.user.user_schema import UserRead
 from backend.app.conversation.conversation_schema import ConversationType
@@ -21,13 +21,11 @@ def get_db():
         db.close()
 
 
-# DASHBOARD: Get All Conversations
-# Returns a list of conversations with the last message and other user info
-# This does NOT load messages, it only builds the chat list
 def get_all_conversations(current_user_id: int) -> List[ConversationDashboardItem]:
     """
     Get all conversations for the current user with last message preview.
-    
+    Note: This does NOT load messages, it only builds the chat list.
+
     Args:
         current_user_id: ID of the current user
         
@@ -39,71 +37,70 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
         # Verify user exists
         user = db.query(User).filter(User.id == current_user_id).first()
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Get all conversations where user is a participant
-        conversations = db.query(Conversation).join(
-            conversation_participants,
-            Conversation.id == conversation_participants.c.conversation_id
-        ).filter(
-            conversation_participants.c.user_id == current_user_id
-        ).all()
-        
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Fetch conversations where user is a participant
+        conversations = (
+            db.query(Conversation)
+            .join(conversation_participants)
+            .filter(conversation_participants.c.user_id == current_user_id)
+            .all()
+        )
+
         dashboard = []
-        
+
+        # Build dashboard items
         for convo in conversations:
+            # Fetch last message content
+            last_message_content = (
+                db.query(Message.raw_content)
+                .filter(Message.id == convo.last_message_id)
+                .scalar()
+                if convo.last_message_id else None
+            )
+
             if convo.type == ConversationType.PRIVATE:
-                # Process private conversation
-                # Get the other user (not the current user)
+                # Get the other user in private conversations
                 other_user = next(
                     (p for p in convo.participants if p.id != current_user_id),
                     None
                 )
-                
                 if not other_user:
-                    continue  # Skip if no other user found (shouldn't happen)
-                
-                # Get last message if exists
-                last_message_content = None
-                if convo.last_message_id:
-                    last_message = db.query(Message).filter(
-                        Message.id == convo.last_message_id
-                    ).first()
-                    if last_message:
-                        last_message_content = last_message.raw_content
-                
-                dashboard.append(ConversationDashboardItem(
-                    id=convo.id,
-                    type=ConversationType.PRIVATE,
-                    updated_at=convo.updated_at,
-                    last_message=last_message_content
-                ))
-            elif convo.type == ConversationType.GROUP:
-                # Process group conversation
-                # Get last message if exists
-                last_message_content = None
-                if convo.last_message_id:
-                    last_message = db.query(Message).filter(
-                        Message.id == convo.last_message_id
-                    ).first()
-                    if last_message:
-                        last_message_content = last_message.raw_content
-                
-                dashboard.append(ConversationDashboardItem(
-                    id=convo.id,
-                    type=ConversationType.GROUP,
-                    updated_at=convo.updated_at,
-                    last_message=last_message_content
-                ))
-        
-        # Sort by updated_at, newest first
-        dashboard.sort(key=lambda x: x.updated_at if x.updated_at else datetime.min, reverse=True)
-        
+                    continue
+
+                dashboard.append(
+                    PrivateConversationDashboardItem(
+                        id=convo.id,
+                        type=ConversationType.PRIVATE,
+                        updated_at=convo.updated_at,
+                        last_message=last_message_content,
+                        other_user=other_user
+                    )
+                )
+            else:
+                # Add group conversation details
+                dashboard.append(
+                    GroupConversationDashboardItem(
+                        id=convo.id,
+                        type=ConversationType.GROUP,
+                        updated_at=convo.updated_at,
+                        last_message=last_message_content,
+                        group_name=convo.group_name,
+                        member_count=len(convo.participants),
+                        participants=[
+                            ConversationParticipantRead(
+                                id=participant.id,
+                                username=participant.username
+                            )
+                            for participant in convo.participants
+                        ]
+                    )
+                )
+
+        # Sort by latest activity
+        dashboard.sort(key=lambda x: x.updated_at, reverse=True)
         return dashboard
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -115,11 +112,10 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
         db.close()
 
 
-# OPEN CHAT: Get Messages by Conversation ID (Called only when user clicks a conversation)
 def get_conversation_by_id(conversation_id: int, current_user_id: int) -> ConversationWithMessages:
     """
     Get a conversation with all its messages by conversation ID.
-    
+    Note: This is called when a user opens a conversation thread.
     Args:
         conversation_id: ID of the conversation
         current_user_id: ID of the current user (for access control)
@@ -201,7 +197,13 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
         # Build response
         return ConversationWithMessages(
             id=conversation.id,
-            participants=[p.id for p in conversation.participants],
+            participants=[
+                ConversationParticipantRead(
+                    id=participant.id,
+                    username=participant.username
+                )
+                for participant in conversation.participants
+            ],
             last_message_id=conversation.last_message_id,
             updated_at=conversation.updated_at,
             messages=message_reads
