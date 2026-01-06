@@ -3,14 +3,18 @@ import React, { useState } from "react";
 import {
   Alert,
   Image,
+  Keyboard,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Fonts } from "@/constants/theme";
 
 const LoginScreen = () => {
   const [emailOrNumber, setEmailOrNumber] = useState("");
@@ -28,74 +32,82 @@ const LoginScreen = () => {
 
     // Implement actual authentication with backend
     Alert.alert("Success", "Login Successful", [
-      { text: "OK", onPress: () => router.replace("/(tabs)" as Href) },
+      { text: "OK", onPress: () => router.replace("/(tabs)/messages" as Href) },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-
-      {/* Header Section */}
-      <View>
-        <Image
-          source={require("@/assets/images/FILTalk Header Logo.png")}
-          accessibilityLabel="FILTalk"
-          style={styles.headerLogo}
-        />
-      </View>
-
-      {/* Login Section */}
-      <Text style={styles.loginText}>Login</Text>
-
-      <View style={styles.formSection}>
-        <Text style={styles.labelText}>Email or Number</Text>
-        <TextInput
-          style={styles.inputField}
-          value={emailOrNumber}
-          onChangeText={setEmailOrNumber}
-          placeholder="Email or Number"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="email-address"
-        />
-        <Text style={styles.labelText}>Password</Text>
-        <TextInput
-          style={styles.inputField}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor="#9E9E9E"
-          secureTextEntry
-        />
-        <Text
-          style={styles.forgotPass}
-          onPress={() => console.log("Forgot password pressed")}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          Forgot Password?
-        </Text>
-      </View>
+          <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
-      {/* Buttons Section */}
-      <View>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.loginButton]}
-          onPress={handleLogin}
-        >
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.buttonBase, styles.cancelButton]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <Text
-          style={styles.createAcc}
-          onPress={() => router.push("./register")}
-        >
-          Create Account
-        </Text>
-      </View>
+          {/* Header Section */}
+          <View>
+            <Image
+              source={require("@/assets/images/FILTalk Header Logo.png")}
+              accessibilityLabel="FILTalk"
+              style={styles.headerLogo}
+            />
+          </View>
+
+          {/* Login Section */}
+          <Text style={styles.loginText}>Login</Text>
+
+          <View style={styles.formSection}>
+            <Text style={styles.labelText}>Email or Number</Text>
+            <TextInput
+              style={styles.inputField}
+              value={emailOrNumber}
+              onChangeText={setEmailOrNumber}
+              placeholder="Email or Number"
+              placeholderTextColor="#9E9E9E"
+              keyboardType="email-address"
+            />
+            <Text style={styles.labelText}>Password</Text>
+            <TextInput
+              style={styles.inputField}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry
+            />
+            <Text
+              style={styles.forgotPass}
+              onPress={() => console.log("Forgot password pressed")}
+            >
+              Forgot Password?
+            </Text>
+          </View>
+
+          {/* Buttons Section */}
+          <View>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.loginButton]}
+              onPress={handleLogin}
+            >
+              <Text style={styles.buttonText}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.buttonBase, styles.cancelButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text
+              style={styles.createAcc}
+              onPress={() => router.push("./register")}
+            >
+              Create Account
+            </Text>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -103,17 +115,19 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   headerLogo: {
     color: "#000000",
-    width: 400,
+    width: 350,
     height: 160,
     resizeMode: "contain",
     alignSelf: "flex-start",
     marginTop: -30,
-    marginBottom: 0,
+    marginBottom: 35,
   },
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
-    justifyContent: "flex-start",
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: "center",
     paddingTop: 0,
   },
@@ -131,32 +145,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 20,
     backgroundColor: "#fff",
+    fontFamily: Fonts.regular,
+    fontSize: 18,
   },
   loginText: {
-    fontSize: 25,
+    fontSize: 35,
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 20,
+    marginTop: -40,
+    marginBottom: 70,
+    fontFamily: Fonts.regular,
   },
   labelText: {
     color: "#545454",
-    fontSize: 15,
+    fontSize: 21,
     fontWeight: "900",
     textAlign: "left",
     alignSelf: "flex-start",
     marginBottom: 15,
+    fontFamily: Fonts.regular,
   },
   forgotPass: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: "900",
     color: "#0039a9",
     textAlign: "left",
     alignSelf: "flex-start",
     marginBottom: 50,
     textDecorationLine: "underline",
+    fontFamily: Fonts.regular,
   },
   buttonBase: {
-    width: 250,
+    width: 180,
     height: 50,
     justifyContent: "center",
     alignItems: "center",
@@ -174,16 +194,19 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "900",
+    fontFamily: Fonts.regular,
   },
   createAcc: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "900",
     color: "#0039a9",
     alignSelf: "center",
     marginBottom: 100,
+    marginLeft: 5,
     textDecorationLine: "underline",
+    fontFamily: Fonts.regular,
   },
 });
 

@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Fonts } from "@/constants/theme";
 
 const LoginRegisterScreen = () => {
   const router = useRouter();
@@ -54,14 +55,15 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   mainLogo: {
-    width: 400,
-    height: 400,
+    width: 450,
+    height: 450,
     resizeMode: "contain",
     alignSelf: "center",
-    marginBottom: -50,
+    marginBottom: -10,
+    marginTop: -60,
   },
   buttonBase: {
-    width: 250,
+    width: 150,
     height: 50,
     justifyContent: "center",
     alignItems: "center",
@@ -78,8 +80,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 30,
     fontWeight: "900",
+    fontFamily: Fonts.regular,
   },
 });
 
