@@ -6,9 +6,11 @@ from backend.app.user.user_model import User
 from backend.app.message.message_model import Message, ModerationStatus
 from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
-from backend.app.message.message_schema import MessageRead, MessageStatus, MessageReceiptRead, DeliveryStatus
-from backend.app.moderation import cfg_result_schema, normalizationV1, tokenizer, parser
+from backend.app.message.message_schema import MessageRead, MessageReceiptRead
 from typing import Optional
+from backend.app.moderation.normalizationV1 import normalization
+from backend.app.moderation.tokenizer import tokenize
+from backend.app.moderation.rank import Ranker
 
 def get_db():
     """Dependency to get database session."""
@@ -67,6 +69,9 @@ def send_message(
         content: Message content
         conversation_id: ID of the conversation (optional)
         receiver_id: ID of the receiver (optional)
+
+        Note: Either conversation_id or receiver_id must be provided, but not both.
+        Different purpose: conversation_id is for existing conversations, receiver_id is for starting new private chats.
 
     Returns:
         MessageRead: The created message
@@ -127,9 +132,8 @@ def send_message(
                 )
             conversation = create_new_conversation(db, sender_id, receiver_id)
 
-        # Filter message through CFG (normalization, tokenization, parsing, scoring, decision)
         # ------------------------------------------------------- #
-        # CFG implementation logic here: (filter before sending)
+        # Message Moderation Pipeline (filter before sending)
         # 1. Normalization
         # 2. Tokenization
         # 3. CFG Parsing
@@ -137,17 +141,32 @@ def send_message(
         # 5. Decision (allow / mask / block / flag)
         # ------------------------------------------------------- #
 
+        normalized_content = normalization(content)
+        tokens = tokenize(normalized_content)
+        ranker = Ranker(tokens)
+        severity_score = ranker.calculate_severity()
+
+        if severity_score == 0:
+            moderation_status = ModerationStatus.ALLOWED
+        else:
+            action = ranker.get_action(severity_score)
+            moderation_status = ModerationStatus[action.upper()]
+
+        # If blocked, do not create message
+        if moderation_status == ModerationStatus.BLOCKED:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Message blocked due to policy violations"
+            )
+        
         # Create message
         new_message = Message(
             conversation_id=conversation.id,
             sender_id=sender_id,
-            raw_content=content,
-            normalized_content=content,  # Will be set by CFG implementation
-            moderation_status=ModerationStatus.ALLOWED,  # Default status
-            delivery_status=ReceiptDeliveryStatus.SENT,  # Initial delivery status
-            severity_score=None,  # Will be set by CFG implementation
-            matched_layers=None,  # Will be set by CFG implementation
-            matched_rules=None,  # Will be set by CFG implementation
+            content=content,
+            moderation_status=moderation_status,
+            delivery_status=ReceiptDeliveryStatus.SENT,
+            severity_score=severity_score,
             timestamp=datetime.utcnow()
         )
 
@@ -171,21 +190,6 @@ def send_message(
         db.commit()
         db.refresh(new_message)
 
-        # Map moderation_status enum to MessageStatus schema enum
-        moderation_status_map = {
-            ModerationStatus.ALLOWED: MessageStatus.allowed,
-            ModerationStatus.MASKED: MessageStatus.masked,
-            ModerationStatus.BLOCKED: MessageStatus.blocked,
-            ModerationStatus.FLAGGED: MessageStatus.flagged,
-        }
-
-        # Map receipt delivery_status enum to DeliveryStatus schema enum
-        delivery_status_map = {
-            ReceiptDeliveryStatus.SENT: DeliveryStatus.sent,
-            ReceiptDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
-            ReceiptDeliveryStatus.READ: DeliveryStatus.read,
-        }
-
         # Get receipts for the message
         receipts = db.query(MessageReceipt).filter(
             MessageReceipt.message_id == new_message.id
@@ -194,7 +198,7 @@ def send_message(
         receipt_reads = [
             MessageReceiptRead(
                 user_id=receipt.user_id,
-                delivery_status=delivery_status_map.get(receipt.delivery_status, DeliveryStatus.sent),
+                delivery_status=receipt.delivery_status,
                 delivered_at=receipt.delivered_at,
                 read_at=receipt.read_at
             )
@@ -205,8 +209,8 @@ def send_message(
             id=new_message.id,
             conversation_id=new_message.conversation_id,
             sender_id=new_message.sender_id,
-            content=new_message.raw_content,
-            status=moderation_status_map.get(new_message.moderation_status, MessageStatus.allowed),
+            content=new_message.content,
+            status=new_message.moderation_status,
             created_at=new_message.timestamp,
             receipts=receipt_reads
         )
