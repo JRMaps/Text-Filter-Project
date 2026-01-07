@@ -3,11 +3,11 @@ from fastapi import HTTPException, status
 from typing import List
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.message.message_model import Message, ModerationStatus
-from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
+from backend.app.message.message_model import Message
+from backend.app.message.message_receipt_model import MessageReceipt
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead
-from backend.app.message.message_schema import MessageRead, MessageStatus, MessageReceiptRead, DeliveryStatus
+from backend.app.message.message_schema import MessageRead, MessageReceiptRead
 from backend.app.user.user_schema import UserRead
 from backend.app.conversation.conversation_schema import ConversationType
 
@@ -53,7 +53,7 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
         for convo in conversations:
             # Fetch last message content
             last_message_content = (
-                db.query(Message.raw_content)
+                db.query(Message.content)
                 .filter(Message.id == convo.last_message_id)
                 .scalar()
                 if convo.last_message_id else None
@@ -148,21 +148,6 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
         messages = db.query(Message).filter(
             Message.conversation_id == conversation_id
         ).order_by(Message.timestamp.asc()).all()
-
-        # Map moderation_status enum to MessageStatus schema enum
-        moderation_status_map = {
-            ModerationStatus.ALLOWED: MessageStatus.allowed,
-            ModerationStatus.MASKED: MessageStatus.masked,
-            ModerationStatus.BLOCKED: MessageStatus.blocked,
-            ModerationStatus.FLAGGED: MessageStatus.flagged,
-        }
-        
-        # Map receipt delivery_status enum to DeliveryStatus schema enum
-        delivery_status_map = {
-            ReceiptDeliveryStatus.SENT: DeliveryStatus.sent,
-            ReceiptDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
-            ReceiptDeliveryStatus.READ: DeliveryStatus.read,
-        }
         
         # Convert messages to MessageRead schema with receipts
         message_reads = []
@@ -175,7 +160,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
             receipt_reads = [
                 MessageReceiptRead(
                     user_id=receipt.user_id,
-                    delivery_status=delivery_status_map.get(receipt.delivery_status, DeliveryStatus.sent),
+                    delivery_status=receipt.delivery_status,
                     delivered_at=receipt.delivered_at,
                     read_at=receipt.read_at
                 )
@@ -187,9 +172,9 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
                     id=msg.id,
                     conversation_id=msg.conversation_id,
                     sender_id=msg.sender_id,
-                    content=msg.raw_content,  # Map raw_content to content
-                    status=moderation_status_map.get(msg.moderation_status, MessageStatus.allowed),
-                    created_at=msg.timestamp,  # Map timestamp to created_at
+                    content=msg.content, 
+                    status=msg.moderation_status,
+                    created_at=msg.timestamp,
                     receipts=receipt_reads
                 )
             )
