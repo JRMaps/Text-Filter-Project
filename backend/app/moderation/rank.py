@@ -42,12 +42,12 @@ class Ranker:
         Map severity to moderation action
         """
         actions = {
-            0: "allowed",
-            1: "masked",     # e.g., ****
-            2: "flagged",    # review
-            3: "blocked"     # reject message
+            0: "ALLOWED",  
+            1: "MASKED",
+            2: "FLAGGED",
+            3: "BLOCKED"
         }
-        return actions.get(severity, "allowed")
+        return actions.get(severity, "ALLOWED")
 
     def rank_message(self):
         severity = self.calculate_severity()

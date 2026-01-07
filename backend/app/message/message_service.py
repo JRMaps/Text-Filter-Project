@@ -198,7 +198,7 @@ def send_message(
         receipt_reads = [
             MessageReceiptRead(
                 user_id=receipt.user_id,
-                delivery_status=receipt.delivery_status,
+                delivery_status=ReceiptDeliveryStatus[receipt.delivery_status.name], 
                 delivered_at=receipt.delivered_at,
                 read_at=receipt.read_at
             )

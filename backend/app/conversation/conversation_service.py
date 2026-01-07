@@ -7,7 +7,7 @@ from backend.app.message.message_model import Message
 from backend.app.message.message_receipt_model import MessageReceipt
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead
-from backend.app.message.message_schema import MessageRead, MessageReceiptRead
+from backend.app.message.message_schema import MessageRead, MessageReceiptRead, DeliveryStatus, ModerationStatus
 from backend.app.user.user_schema import UserRead
 from backend.app.conversation.conversation_schema import ConversationType
 
@@ -160,7 +160,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
             receipt_reads = [
                 MessageReceiptRead(
                     user_id=receipt.user_id,
-                    delivery_status=receipt.delivery_status,
+                    delivery_status=DeliveryStatus[receipt.delivery_status.name],  # Ensure proper enum handling
                     delivered_at=receipt.delivered_at,
                     read_at=receipt.read_at
                 )
@@ -173,7 +173,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
                     conversation_id=msg.conversation_id,
                     sender_id=msg.sender_id,
                     content=msg.content, 
-                    status=msg.moderation_status,
+                    status=ModerationStatus[msg.moderation_status.name],  # Ensure proper enum handling
                     created_at=msg.timestamp,
                     receipts=receipt_reads
                 )

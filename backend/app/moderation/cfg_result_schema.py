@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from backend.app.message.message_schema import MessageStatus
+from backend.app.message.message_model import ModerationStatus
 
 # CFG moderation result
 class CFGResult(BaseModel):
     severity_score: int
-    moderation_status: MessageStatus
+    moderation_status: ModerationStatus
