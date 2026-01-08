@@ -1,18 +1,13 @@
+from backend.app.message.message_model import ModerationStatus
 from enum import Enum
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 
-class MessageStatus(str, Enum):
-    allowed = "allowed"
-    masked = "masked"
-    blocked = "blocked"
-    flagged = "flagged"
-
 class DeliveryStatus(str, Enum):
-    sent = "sent"
-    delivered = "delivered"
-    read = "read"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    READ = "read"
 
 class MessageBase(BaseModel):
     content: str
@@ -35,7 +30,7 @@ class MessageRead(MessageBase):
     id: int
     conversation_id: int
     sender_id: int
-    status: MessageStatus
+    status: ModerationStatus
     created_at: datetime
     receipts: Optional[List[MessageReceiptRead]] = None
 

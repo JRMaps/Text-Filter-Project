@@ -23,8 +23,7 @@ class Message(Base):
 
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    raw_content = Column(Text, nullable=False)
-    normalized_content = Column(Text)
+    content = Column(Text, nullable=False)
 
     # Moderation filtering status
     moderation_status = Column(
@@ -33,8 +32,6 @@ class Message(Base):
     ) 
 
     severity_score = Column(Integer)
-    matched_layers = Column(JSON)
-    matched_rules = Column(JSON)
 
     timestamp = Column(DateTime, default=datetime.utcnow)
 
