@@ -15,18 +15,19 @@ from datetime import timedelta, datetime
 from sqlalchemy.orm import Session
 
 
-def register_user(db:Session, user_data: UserCreate) -> dict:
+def register_user(db: Session, user_data: UserCreate) -> dict:
     try:
         existing_user = db.query(User).filter(
             (User.email == user_data.email) |
-            (User.username == user_data.username)
+            (User.username == user_data.username) |
+            (User.phone_number == user_data.phone_number)
         ).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email or username already registered"
+                detail="Email, phone number, or username already registered"
             )
-        
+
         hashed_password = get_password_hash(user_data.password)
         new_user = User(
             username=user_data.username,
@@ -36,17 +37,21 @@ def register_user(db:Session, user_data: UserCreate) -> dict:
             backup_phone_number=user_data.backup_phone_number,
             password_hash=hashed_password
         )
-        
+
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
+
+        user_credential = (
+            {"email": new_user.email} if new_user.email else {"phone_number": new_user.phone_number}
+        )
+
         return {
             "message": "User registered successfully",
             "user": {
                 "id": new_user.id,
                 "username": new_user.username,
-                "email": new_user.email
+                **user_credential
             }
         }
     except HTTPException:
@@ -81,7 +86,7 @@ def login_user(db: Session, login_data: UserLogin) -> Token:
     return Token(access_token=access_token, token_type="bearer")
 
 
-def request_password_reset_otp(db:Session, identifier: str) -> dict:
+def request_password_reset_otp(db: Session, identifier: str) -> dict:
     try:
         user = db.query(User).filter(
             (User.email == identifier) |

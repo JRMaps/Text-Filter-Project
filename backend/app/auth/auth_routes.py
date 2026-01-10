@@ -11,7 +11,7 @@ from backend.app.auth.auth_controller import (
 from backend.app.user.user_schema import UserCreate, UserLogin
 from backend.app.auth.auth_schema import (
     Token,
-    ForgotPasswordOTPRequest,
+    ForgotPasswordRequest,
     VerifyOTPRequest,
     ResetPasswordRequest
 )
@@ -63,14 +63,14 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------- #
 @router.post("/forgot-password-otp")
 def forgot_password_otp(
-    payload: ForgotPasswordOTPRequest,
+    payload: ForgotPasswordRequest,
     db: Session = Depends(get_db)
 ):
     """
     Request an OTP for password reset.
 
     Args:
-        payload (ForgotPasswordOTPRequest): Identifier (email/phone) to send OTP.
+        payload (ForgotPasswordRequest): Email or phone number to send OTP.
         db (Session): Database session.
 
     Returns:
