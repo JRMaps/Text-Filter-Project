@@ -9,7 +9,8 @@ from backend.app.auth.auth_utils import (
     generate_otp,
     hash_otp,
     send_otp_via_email,
-    send_otp_via_phone
+    send_otp_via_phone,
+    get_user_by_email_or_phone
 )
 from datetime import timedelta, datetime
 from sqlalchemy.orm import Session
@@ -66,10 +67,8 @@ def register_user(db: Session, user_data: UserCreate) -> dict:
 
 
 def login_user(db: Session, login_data: UserLogin) -> Token:
-    user = db.query(User).filter(
-        (User.email == login_data.email) |
-        (User.phone_number == login_data.phone_number)
-    ).first()
+    credential = login_data.email or login_data.phone_number
+    user = get_user_by_email_or_phone(db, credential)
 
     if not user or not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
@@ -79,7 +78,7 @@ def login_user(db: Session, login_data: UserLogin) -> Token:
         )
 
     access_token = create_access_token(
-        data={"sub": user.email, "user_id": user.id},
+        data={"user_id": user.id},
         expires_delta=timedelta(minutes=30)
     )
 

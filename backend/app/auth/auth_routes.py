@@ -73,6 +73,11 @@ def forgot_password_otp(
         payload (ForgotPasswordRequest): Email or phone number to send OTP.
         db (Session): Database session.
 
+        sample request payload:
+        {
+            "identifier": "{email or phone number}"
+        }
+
     Returns:
         dict: Message indicating OTP was sent if the account exists.
     """
@@ -91,6 +96,12 @@ def verify_otp(
         payload (VerifyOTPRequest): Identifier and OTP to verify.
         db (Session): Database session.
 
+        request payload:
+        {
+            "identifier": "{email or phone number}",
+            "otp": "{otp code}"
+        }
+
     Returns:
         dict: Message indicating OTP verification status.
     """
@@ -108,6 +119,12 @@ def reset_user_password_with_otp(
     Args:
         payload (ResetPasswordRequest): Identifier, new password, and OTP.
         db (Session): Database session.
+
+        request payload:
+        {
+            "identifier": "{email or phone number}",
+            "new_password": "{new password}"
+        }
 
     Returns:
         dict: Message indicating password reset status.
