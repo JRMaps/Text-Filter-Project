@@ -77,12 +77,11 @@ const LoginScreen = () => {
               placeholderTextColor="#9E9E9E"
               secureTextEntry
             />
-            <Text
-              style={styles.forgotPass}
-              onPress={() => console.log("Forgot password pressed")}
-            >
-              Forgot Password?
-            </Text>
+            <TouchableOpacity onPress={() => router.push("../passwordRecovery")}>
+              <Text style={styles.forgotPass}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Buttons Section */}
