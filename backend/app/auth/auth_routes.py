@@ -1,71 +1,119 @@
-from fastapi import APIRouter, HTTPException
-from backend.app.auth.auth_controller import register_user, login_user, request_password_reset_otp, verify_password_reset_otp, reset_password_with_otp
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from backend.app.database.database import get_db
+from backend.app.auth.auth_controller import (
+    register_user,
+    login_user,
+    request_password_reset_otp,
+    verify_password_reset_otp,
+    reset_password_with_otp
+)
 from backend.app.user.user_schema import UserCreate, UserLogin
-from backend.app.auth.auth_schema import Token, ForgotPasswordOTPRequest, VerifyOTPRequest, ResetPasswordRequest
+from backend.app.auth.auth_schema import (
+    Token,
+    ForgotPasswordOTPRequest,
+    VerifyOTPRequest,
+    ResetPasswordRequest
+)
 
 router = APIRouter()
 
-
 @router.post("/register", response_model=dict, status_code=201)
-async def register(user: UserCreate):
+def register(user: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user.
-    
-    - **username**: Unique username for the user
-    - **email**: Valid email address
-    - **password**: User password (will be hashed)
+
+    Args:
+        user (UserCreate): User registration data.
+        - username
+        - email / phone_number is required (but not both)
+        - backup_email and backup_phone_number are optional.
+        - password
+        db (Session): Database session.
+
+        Note: the fe should pre-validate if the credential used is email or phone number
+        to match the field in the schema.
+
+    Returns:
+        dict: Success message and user details.
     """
-    try:
-        return await register_user(user)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return register_user(db, user)
 
 
 @router.post("/login", response_model=Token)
-async def login(login_data: UserLogin):
+def login(login_data: UserLogin, db: Session = Depends(get_db)):
     """
-    Authenticate a user and receive an access token.
-    
-    - **email**: User's email address
-    - **password**: User's password
-    
-    Returns a JWT access token that can be used for authenticated requests.
+    Authenticate a user and generate an access token.
+
+    Args:
+        login_data (UserLogin): Login credentials (email/phone and password).
+        db (Session): Database session.
+
+    Returns:
+        Token: JWT access token and token type.
     """
-    try:
-        return await login_user(login_data)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return login_user(db, login_data)
 
-
-@router.post("/forgot-password-otp", status_code=200)
-async def forgot_password_otp(payload: ForgotPasswordOTPRequest):
+# ---------------------------------------------------------------------- #
+# Forgot password pipeline:
+# 1. Request OTP
+# 2. Verify OTP
+# 3. Reset Password
+# Note: These are in different endpoints to allow step-by-step process.
+# ---------------------------------------------------------------------- #
+@router.post("/forgot-password-otp")
+def forgot_password_otp(
+    payload: ForgotPasswordOTPRequest,
+    db: Session = Depends(get_db)
+):
     """
     Request an OTP for password reset.
-    Sends OTP to user's email or phone.
+
+    Args:
+        payload (ForgotPasswordOTPRequest): Identifier (email/phone) to send OTP.
+        db (Session): Database session.
+
+    Returns:
+        dict: Message indicating OTP was sent if the account exists.
     """
-    return await request_password_reset_otp(payload.identifier)
+    return request_password_reset_otp(db, payload.identifier)
 
 
-@router.post("/verify-otp", status_code=200)
-async def verify_otp(payload: VerifyOTPRequest):
+@router.post("/verify-otp")
+def verify_otp(
+    payload: VerifyOTPRequest,
+    db: Session = Depends(get_db)
+):
     """
-    Verify the OTP sent to user.
-    Must be called before resetting password.
+    Verify the OTP sent to the user.
+
+    Args:
+        payload (VerifyOTPRequest): Identifier and OTP to verify.
+        db (Session): Database session.
+
+    Returns:
+        dict: Message indicating OTP verification status.
     """
-    return await verify_password_reset_otp(payload.identifier, payload.otp)
+    return verify_password_reset_otp(db, payload.identifier, payload.otp)
 
 
-@router.post("/reset-password-otp", status_code=200)
-async def reset_user_password_with_otp(payload: ResetPasswordRequest):
+@router.post("/reset-password-otp")
+def reset_user_password_with_otp(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
     """
-    Reset password after OTP verification.
-    Can only be called after successful OTP verification.
+    Reset the user's password after OTP verification.
+
+    Args:
+        payload (ResetPasswordRequest): Identifier, new password, and OTP.
+        db (Session): Database session.
+
+    Returns:
+        dict: Message indicating password reset status.
     """
-    return await reset_password_with_otp(
+    return reset_password_with_otp(
+        db,
         payload.identifier,
         payload.new_password
     )
