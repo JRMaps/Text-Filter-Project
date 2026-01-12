@@ -15,7 +15,20 @@ async def api_send_message(
     db: Session = Depends(get_db)
 ):
     """
-    API to send a message to a conversation.
+    Send a message to a conversation (private or group). Creates a conversation if it doesn't exist.
+    Note: It will be broadcasted via WebSocket after creation.
+
+    Args:
+        sender_id: ID of the user sending the message
+        content: Message content
+        conversation_id: ID of the conversation (optional)
+        receiver_id: ID of the receiver (optional)
+
+        Note: Either conversation_id or receiver_id must be provided, but not both.
+        Different purpose: conversation_id is for existing conversations, receiver_id is for starting new private chats.
+
+    Returns:
+        MessageRead: The created message
     """
     response = send_message(
         db=db,

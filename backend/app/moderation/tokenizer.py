@@ -1,5 +1,5 @@
 import re
-from normalizationV1 import normalization
+from backend.app.moderation.normalizationV1 import normalization
 
 # Token types to be used in parsing
 

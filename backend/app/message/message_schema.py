@@ -9,12 +9,19 @@ class DeliveryStatus(str, Enum):
     DELIVERED = "delivered"
     READ = "read"
 
+
 class MessageBase(BaseModel):
     content: str
 
+
 class MessageCreate(MessageBase):
-    conversation_id: int
-    receiver_id: Optional[int] = None  # Optional if conversation_id is provided
+    conversation_id: Optional[int] = None  # If sending to an existing conversation
+    receiver_id: Optional[int] = None  # If starting a new conversation
+
+    def validate(self):
+        if not self.conversation_id and not self.receiver_id:
+            raise ValueError("Either conversation_id or receiver_id must be provided.")
+
 
 class MessageReceiptRead(BaseModel):
     user_id: int
@@ -25,12 +32,12 @@ class MessageReceiptRead(BaseModel):
     class Config:
         from_attributes = True
 
-# Websocket output
+
 class MessageRead(MessageBase):
     id: int
     conversation_id: int
     sender_id: int
-    status: ModerationStatus
+    moderation_status: ModerationStatus
     created_at: datetime
     receipts: Optional[List[MessageReceiptRead]] = None
 

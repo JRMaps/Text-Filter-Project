@@ -1,39 +1,19 @@
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from backend.app.database.database import get_db
 from sqlalchemy import or_
 from typing import List
-from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.user.user_schema import UserRead, UserUpdate  # Import UserUpdate schema
+from backend.app.user.user_schema import UserRead, UserUpdate 
 
 
-def get_db():
-    """Dependency to get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def current_user() -> UserRead:
-    """
-    Get the current authenticated user.
-    This should be called with Depends(get_current_user) in routes.
-    """
-    # This function is kept for backward compatibility
-    # Routes should use Depends(get_current_user) directly
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="This function should not be called directly. Use Depends(get_current_user) in routes."
-    )
-
-
-def search_user(query: str) -> List[UserRead]:
+def search_user(query: str, db: Session) -> List[UserRead]:
     """
     Search for users by username or email.
     
     Args:
         query: Search query string
+        db: Database session
         
     Returns:
         List of matching users
@@ -44,14 +24,14 @@ def search_user(query: str) -> List[UserRead]:
             detail="Query parameter is required"
         )
     
-    db = SessionLocal()
     try:
         # Search by username or email (case-insensitive partial match)
         search_term = f"%{query.strip()}%"
         users = db.query(User).filter(
             or_(
                 User.username.ilike(search_term),
-                User.email.ilike(search_term)
+                User.email.ilike(search_term),
+                User.phone_number.ilike(search_term)
             )
         ).limit(50).all()  # Limit results to 50
         
@@ -59,7 +39,8 @@ def search_user(query: str) -> List[UserRead]:
             UserRead(
                 id=user.id,
                 username=user.username,
-                email=user.email
+                email=user.email,
+                phone_number=user.phone_number
             )
             for user in users
         ]
@@ -69,21 +50,19 @@ def search_user(query: str) -> List[UserRead]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error searching users: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def view_user_profile(user_id: int) -> UserRead:
+def view_user_profile(user_id: int, db: Session) -> UserRead:
     """
     View a user's profile by user ID.
     
     Args:
         user_id: ID of the user to view
+        db: Database session
         
     Returns:
         UserRead: User profile information
     """
-    db = SessionLocal()
     try:
         user = db.query(User).filter(User.id == user_id).first()
         
@@ -96,7 +75,8 @@ def view_user_profile(user_id: int) -> UserRead:
         return UserRead(
             id=user.id,
             username=user.username,
-            email=user.email
+            email=user.email,
+            phone_number=user.phone_number
         )
         
     except HTTPException:
@@ -106,22 +86,20 @@ def view_user_profile(user_id: int) -> UserRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching user profile: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def edit_user_profile(user_id: int, user_update: UserUpdate) -> UserRead:
-    """
+def edit_user_profile(user_id: int, user_update: UserUpdate, db: Session) -> UserRead:
+    """ 
     Edit the current user's profile.
     
     Args:
         user_id: ID of the user to update
         user_update: Data to update the user profile with
+        db: Database session
         
     Returns:
         UserRead: Updated user profile information
     """
-    db = SessionLocal()
     try:
         user = db.query(User).filter(User.id == user_id).first()
         
@@ -133,7 +111,16 @@ def edit_user_profile(user_id: int, user_update: UserUpdate) -> UserRead:
         
         update_data = user_update.model_dump(exclude_unset=True)
         
-        if "backup_email" in update_data and update_data["backup_email"]:
+        # Restrict updates to backup_email, backup_phone_number, and username
+        allowed_fields = {"backup_email", "backup_phone_number", "username"}
+        for field in update_data.keys():
+            if field not in allowed_fields:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Field '{field}' cannot be updated"
+                )
+        
+        if "backup_email" in update_data:
             existing_user = db.query(User).filter(
                 User.backup_email == update_data["backup_email"],
                 User.id != user_id
@@ -144,7 +131,7 @@ def edit_user_profile(user_id: int, user_update: UserUpdate) -> UserRead:
                     detail="Backup email already in use"
                 )
         
-        if "backup_phone_number" in update_data and update_data["backup_phone_number"]:
+        if "backup_phone_number" in update_data:
             existing_user = db.query(User).filter(
                 User.backup_phone_number == update_data["backup_phone_number"],
                 User.id != user_id
@@ -173,5 +160,3 @@ def edit_user_profile(user_id: int, user_update: UserUpdate) -> UserRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating user profile: {str(e)}"
         )
-    finally:
-        db.close()
