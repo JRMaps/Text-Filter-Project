@@ -1,24 +1,16 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message, ModerationStatus
 from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
-from backend.app.conversation.conversation_model import Conversation, conversation_participants
+from backend.app.conversation.conversation_model import Conversation
 from backend.app.message.message_schema import MessageRead, MessageReceiptRead
 from typing import Optional
 from backend.app.moderation.normalizationV1 import normalization
 from backend.app.moderation.tokenizer import tokenize
 from backend.app.moderation.rank import Ranker
-
-def get_db():
-    """Dependency to get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from backend.app.websocket.connection_manager import manager
 
 
 def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Conversation:
@@ -56,6 +48,7 @@ def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Co
 
 
 def send_message(
+    db: Session,
     sender_id: int,
     content: str,
     conversation_id: Optional[int] = None, 
@@ -63,6 +56,7 @@ def send_message(
 ):
     """
     Send a message to a conversation (private or group). Creates a conversation if it doesn't exist.
+    Note: It will be broadcasted via WebSocket after creation.
 
     Args:
         sender_id: ID of the user sending the message
@@ -94,9 +88,7 @@ def send_message(
             detail="Provide only one of conversation_id or receiver_id"
         )
 
-    db = SessionLocal()
     try:
-        # Verify sender exists
         sender = db.query(User).filter(User.id == sender_id).first()
         if not sender:
             raise HTTPException(
@@ -104,7 +96,6 @@ def send_message(
                 detail="Sender not found"
             )
 
-        # Resolve conversation
         if conversation_id:
             conversation = db.query(Conversation).filter(
                 Conversation.id == conversation_id
@@ -132,15 +123,8 @@ def send_message(
                 )
             conversation = create_new_conversation(db, sender_id, receiver_id)
 
-        # ------------------------------------------------------- #
-        # Message Moderation Pipeline (filter before sending)
-        # 1. Normalization
-        # 2. Tokenization
-        # 3. CFG Parsing
-        # 4. Severity Scoring
-        # 5. Decision (allow / mask / block / flag)
-        # ------------------------------------------------------- #
 
+        # Message Moderation Pipeline (filter before sending)
         normalized_content = normalization(content)
         tokens = tokenize(normalized_content)
         ranker = Ranker(tokens)
@@ -205,6 +189,29 @@ def send_message(
             for receipt in receipts
         ]
 
+        # Broadcast new message to conversation participants
+        participant_ids = [user.id for user in conversation.participants]
+        manager.broadcast_new_message(
+            participant_ids=participant_ids,
+            message_data={
+                "id": new_message.id,
+                "conversation_id": new_message.conversation_id,
+                "sender_id": new_message.sender_id,
+                "content": new_message.content,
+                "status": new_message.moderation_status.name,
+                "created_at": new_message.timestamp.isoformat(),
+                "receipts": receipt_reads
+            }
+        )
+
+        # Broadcast dashboard update to all participants
+        manager.broadcast_dashboard_update(
+            participant_ids=participant_ids,
+            conversation_id=conversation.id,
+            last_message=conversation.last_message_id,
+            updated_at=new_message.created_at.isoformat()
+        )
+
         return MessageRead(
             id=new_message.id,
             conversation_id=new_message.conversation_id,
@@ -224,5 +231,74 @@ def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error sending message: {str(e)}"
         )
-    finally:
-        db.close()
+
+
+def mark_message_delivered(db: Session, message_id: int, user_id: int) -> Optional[dict]:
+    """
+    Mark a message as delivered for a specific user.
+
+    Args:
+        message_id: ID of the message to mark as delivered.
+        user_id: ID of the user for whom the message is delivered.
+
+    Returns:
+        dict: Details of the updated message receipt for broadcasting, or None if no update was made.
+    """
+    receipt = db.query(MessageReceipt).filter(
+        MessageReceipt.message_id == message_id,
+        MessageReceipt.user_id == user_id,
+        MessageReceipt.delivery_status == ReceiptDeliveryStatus.SENT
+    ).first()
+
+    if not receipt:
+        return None
+
+    receipt.delivery_status = ReceiptDeliveryStatus.DELIVERED
+    receipt.delivered_at = datetime.utcnow()
+    db.commit()
+    db.refresh(receipt)
+
+    return {
+        "participant_ids": [r.user_id for r in db.query(MessageReceipt)
+            .filter(MessageReceipt.message_id == message_id).all()],
+        "message_id": message_id,
+        "user_id": user_id,
+        "delivery_status": "delivered",
+        "timestamp": receipt.delivered_at.isoformat()
+    }
+
+
+def mark_message_read(db: Session, message_id: int, user_id: int) -> Optional[dict]:
+    """
+    Mark a message as read for a specific user.
+
+    Args:
+        message_id: ID of the message to mark as read.
+        user_id: ID of the user for whom the message is read.
+
+    Returns:
+        dict: Details of the updated message receipt for broadcasting, or None if no update was made.
+    """
+    receipt = db.query(MessageReceipt).filter(
+        MessageReceipt.message_id == message_id,
+        MessageReceipt.user_id == user_id,
+        MessageReceipt.delivery_status == ReceiptDeliveryStatus.DELIVERED
+    ).first()
+
+    if not receipt:
+        return None  # Already read or invalid receipt
+
+    receipt.delivery_status = ReceiptDeliveryStatus.READ
+    receipt.read_at = datetime.utcnow()
+    db.commit()
+    db.refresh(receipt)
+
+    return {
+        "participant_ids": [r.user_id for r in db.query(MessageReceipt).filter(
+            MessageReceipt.message_id == message_id
+        ).all()],
+        "message_id": message_id,
+        "user_id": user_id,
+        "delivery_status": "read",
+        "timestamp": receipt.read_at.isoformat()
+    }

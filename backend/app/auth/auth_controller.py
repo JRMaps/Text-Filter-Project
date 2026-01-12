@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
 from backend.app.user.user_schema import UserCreate, UserLogin
 from backend.app.auth.auth_schema import Token
@@ -7,35 +6,29 @@ from backend.app.auth.auth_utils import (
     verify_password,
     get_password_hash,
     create_access_token,
-    get_user_by_email,
     generate_otp,
     hash_otp,
     send_otp_via_email,
-    send_otp_via_phone
+    send_otp_via_phone,
+    get_user_by_email_or_phone
 )
 from datetime import timedelta, datetime
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from sqlalchemy.orm import Session
 
 
-async def register_user(user_data: UserCreate) -> dict:
-    db = SessionLocal()
+def register_user(db: Session, user_data: UserCreate) -> dict:
     try:
         existing_user = db.query(User).filter(
             (User.email == user_data.email) |
-            (User.username == user_data.username)
+            (User.username == user_data.username) |
+            (User.phone_number == user_data.phone_number)
         ).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email or username already registered"
+                detail="Email, phone number, or username already registered"
             )
-        
+
         hashed_password = get_password_hash(user_data.password)
         new_user = User(
             username=user_data.username,
@@ -45,17 +38,21 @@ async def register_user(user_data: UserCreate) -> dict:
             backup_phone_number=user_data.backup_phone_number,
             password_hash=hashed_password
         )
-        
+
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
+
+        user_credential = (
+            {"email": new_user.email} if new_user.email else {"phone_number": new_user.phone_number}
+        )
+
         return {
             "message": "User registered successfully",
             "user": {
                 "id": new_user.id,
                 "username": new_user.username,
-                "email": new_user.email
+                **user_credential
             }
         }
     except HTTPException:
@@ -67,39 +64,28 @@ async def register_user(user_data: UserCreate) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error registering user: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-async def login_user(login_data: UserLogin) -> Token:
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(
-            (User.email == login_data.email) |
-            (User.phone_number == login_data.phone_number)
-        ).first()
-        
-        if not user or not verify_password(login_data.password, user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Create access token
-        access_token_expires = timedelta(minutes=30)
-        access_token = create_access_token(
-            data={"sub": user.email, "user_id": user.id},
-            expires_delta=access_token_expires
+def login_user(db: Session, login_data: UserLogin) -> Token:
+    credential = login_data.email or login_data.phone_number
+    user = get_user_by_email_or_phone(db, credential)
+
+    if not user or not verify_password(login_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        
-        return Token(access_token=access_token, token_type="bearer")
-    finally:
-        db.close()
+
+    access_token = create_access_token(
+        data={"user_id": user.id},
+        expires_delta=timedelta(minutes=30)
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
 
 
-async def request_password_reset_otp(identifier: str) -> dict:
-    db = SessionLocal()
+def request_password_reset_otp(db: Session, identifier: str) -> dict:
     try:
         user = db.query(User).filter(
             (User.email == identifier) |
@@ -127,13 +113,19 @@ async def request_password_reset_otp(identifier: str) -> dict:
             send_otp_via_phone(identifier, otp)
 
         return {"message": "If the account exists, an OTP has been sent."}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error requesting OTP: {str(e)}"
+        )
 
-    finally:
-        db.close()
 
-
-async def verify_password_reset_otp(identifier: str, otp: str) -> dict:
-    db = SessionLocal()
+def verify_password_reset_otp(db: Session, identifier: str, otp: str) -> dict:
     try:
         user = db.query(User).filter(
             (User.email == identifier) |
@@ -162,13 +154,19 @@ async def verify_password_reset_otp(identifier: str, otp: str) -> dict:
         db.commit()
 
         return {"message": "OTP verified successfully"}
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error verifying OTP: {str(e)}"
+        )
 
-    finally:
-        db.close()
 
-
-async def reset_password_with_otp(identifier: str, new_password: str) -> dict:
-    db = SessionLocal()
+def reset_password_with_otp(db: Session, identifier: str, new_password: str) -> dict:
     try:
         user = db.query(User).filter(
             (User.email == identifier) |
@@ -194,7 +192,14 @@ async def reset_password_with_otp(identifier: str, new_password: str) -> dict:
         db.commit()
 
         return {"message": "Password reset successfully"}
-
-    finally:
-        db.close()
+    
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error resetting password: {str(e)}"
+        )
 
