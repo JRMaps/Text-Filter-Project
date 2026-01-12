@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 from typing import List
-from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message
 from backend.app.message.message_receipt_model import MessageReceipt
@@ -12,16 +12,7 @@ from backend.app.user.user_schema import UserRead
 from backend.app.conversation.conversation_schema import ConversationType
 
 
-def get_db():
-    """Dependency to get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def get_all_conversations(current_user_id: int) -> List[ConversationDashboardItem]:
+def get_all_conversations(current_user_id: int, db: Session) -> List[ConversationDashboardItem]:
     """
     Get all conversations for the current user with last message preview.
     Note: This does NOT load messages, it only builds the chat list.
@@ -32,7 +23,6 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
     Returns:
         List of conversation summaries with other user info and last message
     """
-    db = SessionLocal()
     try:
         # Verify user exists
         user = db.query(User).filter(User.id == current_user_id).first()
@@ -108,11 +98,9 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching conversations: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def get_conversation_by_id(conversation_id: int, current_user_id: int) -> ConversationWithMessages:
+def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Session) -> ConversationWithMessages:
     """
     Get a conversation with all its messages by conversation ID.
     Note: This is called when a user opens a conversation thread.
@@ -123,7 +111,6 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
     Returns:
         ConversationWithMessages: The conversation with all messages
     """
-    db = SessionLocal()
     try:
         # Get conversation
         conversation = db.query(Conversation).filter(
@@ -201,5 +188,3 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching conversation: {str(e)}"
         )
-    finally:
-        db.close()
