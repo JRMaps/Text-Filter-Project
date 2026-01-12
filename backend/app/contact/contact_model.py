@@ -22,6 +22,12 @@ class Contact(Base):
     
     # Status of the contact relationship
     status = Column(SQLEnum(ContactStatus), nullable=False, default=ContactStatus.PENDING)
+
+    blocked_by_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True
+    )
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

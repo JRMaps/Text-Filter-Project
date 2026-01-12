@@ -22,6 +22,7 @@ class ContactRead(BaseModel):
     user_id: int
     contact_id: int
     status: ContactStatus
+    blocked_by_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     
@@ -34,6 +35,7 @@ class ContactWithUser(BaseModel):
     contact_id: int
     contact: UserRead  # The contact user's information
     status: ContactStatus
+    blocked_by_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     

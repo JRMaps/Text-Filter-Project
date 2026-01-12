@@ -1,6 +1,6 @@
 from datetime import datetime
-from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from typing import List, Optional
 from backend.app.database.database import SessionLocal
@@ -14,16 +14,52 @@ from backend.app.contact.contact_shema import (
 from backend.app.user.user_schema import UserRead
 
 
-def get_db():
-    """Dependency to get database session."""
-    db = SessionLocal()
+def get_contacts(user_id: int, status_filter: Optional[ContactStatus], db: Session) -> List[ContactWithUser]:
+    """
+    Get all contacts for a user, including mutual contacts.
+    """
     try:
-        yield db
-    finally:
-        db.close()
+        query = db.query(Contact).filter(
+            or_(
+                Contact.user_id == user_id,
+                Contact.contact_id == user_id
+            )
+        )
+        
+        if status_filter:
+            query = query.filter(Contact.status == status_filter)
+        
+        contacts = query.all()
+        
+        result = []
+        for contact in contacts:
+            # Determine the other user in the contact relationship
+            other_user_id = contact.contact_id if contact.user_id == user_id else contact.user_id
+            contact_user = db.query(User).filter(User.id == other_user_id).first()
+            if contact_user:
+                result.append(ContactWithUser(
+                    id=contact.id,
+                    contact_id=other_user_id,
+                    contact=UserRead(
+                        id=contact_user.id,
+                        username=contact_user.username,
+                        email=contact_user.email
+                    ),
+                    status=SchemaContactStatus(contact.status.value),
+                    created_at=contact.created_at,
+                    updated_at=contact.updated_at
+                ))
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching contacts: {str(e)}"
+        )
 
 
-def send_contact_request(user_id: int, contact_id: int) -> ContactRead:
+def send_contact_request(user_id: int, contact_id: int, db: Session) -> ContactRead:
     """
     Send a contact request to another user.
     
@@ -40,7 +76,6 @@ def send_contact_request(user_id: int, contact_id: int) -> ContactRead:
             detail="Cannot send contact request to yourself"
         )
     
-    db = SessionLocal()
     try:
         # Verify both users exist
         user = db.query(User).filter(User.id == user_id).first()
@@ -129,11 +164,9 @@ def send_contact_request(user_id: int, contact_id: int) -> ContactRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error sending contact request: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def accept_contact_request(user_id: int, contact_id: int) -> ContactRead:
+def accept_contact_request(user_id: int, contact_id: int, db: Session) -> ContactRead:
     """
     Accept a pending contact request.
     
@@ -144,7 +177,6 @@ def accept_contact_request(user_id: int, contact_id: int) -> ContactRead:
     Returns:
         ContactRead: The updated contact
     """
-    db = SessionLocal()
     try:
         # Find the pending request (contact_id sent to user_id)
         contact = db.query(Contact).filter(
@@ -182,11 +214,9 @@ def accept_contact_request(user_id: int, contact_id: int) -> ContactRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error accepting contact request: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def reject_contact_request(user_id: int, contact_id: int) -> dict:
+def reject_contact_request(user_id: int, contact_id: int, db: Session) -> dict:
     """
     Reject a pending contact request (delete it).
     
@@ -197,7 +227,6 @@ def reject_contact_request(user_id: int, contact_id: int) -> dict:
     Returns:
         dict: Success message
     """
-    db = SessionLocal()
     try:
         contact = db.query(Contact).filter(
             Contact.user_id == contact_id,
@@ -225,11 +254,9 @@ def reject_contact_request(user_id: int, contact_id: int) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error rejecting contact request: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def remove_contact(user_id: int, contact_id: int) -> dict:
+def remove_contact(user_id: int, contact_id: int, db: Session) -> dict:
     """
     Remove an accepted contact.
     
@@ -240,7 +267,6 @@ def remove_contact(user_id: int, contact_id: int) -> dict:
     Returns:
         dict: Success message
     """
-    db = SessionLocal()
     try:
         # Find contact relationship (bidirectional)
         contact = db.query(Contact).filter(
@@ -271,20 +297,11 @@ def remove_contact(user_id: int, contact_id: int) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error removing contact: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def block_contact(user_id: int, contact_id: int) -> ContactRead:
+def block_contact(user_id: int, contact_id: int, db: Session) -> ContactRead:
     """
-    Block a contact.
-    
-    Args:
-        user_id: ID of the user blocking
-        contact_id: ID of the user to block
-        
-    Returns:
-        ContactRead: The updated contact
+    Block a contact and set the blocked_by_id field.
     """
     if user_id == contact_id:
         raise HTTPException(
@@ -292,7 +309,6 @@ def block_contact(user_id: int, contact_id: int) -> ContactRead:
             detail="Cannot block yourself"
         )
     
-    db = SessionLocal()
     try:
         # Check if contact relationship exists
         contact = db.query(Contact).filter(
@@ -304,12 +320,8 @@ def block_contact(user_id: int, contact_id: int) -> ContactRead:
         
         if contact:
             # Update existing contact to blocked
-            # Always set user_id as the blocker
-            if contact.user_id != user_id:
-                # Swap the relationship
-                contact.user_id, contact.contact_id = contact.contact_id, contact.user_id
-            
             contact.status = ContactStatus.BLOCKED
+            contact.blocked_by_id = user_id
             contact.updated_at = datetime.utcnow()
         else:
             # Create new blocked contact
@@ -317,6 +329,7 @@ def block_contact(user_id: int, contact_id: int) -> ContactRead:
                 user_id=user_id,
                 contact_id=contact_id,
                 status=ContactStatus.BLOCKED,
+                blocked_by_id=user_id,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
@@ -343,11 +356,9 @@ def block_contact(user_id: int, contact_id: int) -> ContactRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error blocking contact: {str(e)}"
         )
-    finally:
-        db.close()
 
 
-def unblock_contact(user_id: int, contact_id: int) -> dict:
+def unblock_contact(user_id: int, contact_id: int, db: Session) -> dict:
     """
     Unblock a contact (remove the blocked contact).
     
@@ -358,7 +369,6 @@ def unblock_contact(user_id: int, contact_id: int) -> dict:
     Returns:
         dict: Success message
     """
-    db = SessionLocal()
     try:
         contact = db.query(Contact).filter(
             Contact.user_id == user_id,
@@ -386,138 +396,4 @@ def unblock_contact(user_id: int, contact_id: int) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error unblocking contact: {str(e)}"
         )
-    finally:
-        db.close()
-
-
-def get_contacts(user_id: int, status_filter: Optional[ContactStatus] = None) -> List[ContactWithUser]:
-    """
-    Get all contacts for a user.
-    
-    Args:
-        user_id: ID of the user
-        status_filter: Optional status filter (ACCEPTED, PENDING, BLOCKED)
-        
-    Returns:
-        List of contacts with user information
-    """
-    db = SessionLocal()
-    try:
-        query = db.query(Contact).filter(
-            Contact.user_id == user_id
-        )
-        
-        if status_filter:
-            query = query.filter(Contact.status == status_filter)
-        
-        contacts = query.all()
-        
-        result = []
-        for contact in contacts:
-            contact_user = db.query(User).filter(User.id == contact.contact_id).first()
-            if contact_user:
-                result.append(ContactWithUser(
-                    id=contact.id,
-                    contact_id=contact.contact_id,
-                    contact=UserRead(
-                        id=contact_user.id,
-                        username=contact_user.username,
-                        email=contact_user.email
-                    ),
-                    status=SchemaContactStatus(contact.status.value),
-                    created_at=contact.created_at,
-                    updated_at=contact.updated_at
-                ))
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching contacts: {str(e)}"
-        )
-    finally:
-        db.close()
-
-
-def get_pending_requests(user_id: int) -> List[ContactWithUser]:
-    """
-    Get all pending contact requests received by a user.
-    
-    Args:
-        user_id: ID of the user
-        
-    Returns:
-        List of pending contact requests
-    """
-    db = SessionLocal()
-    try:
-        # Get requests where user_id is the contact (requests sent TO this user)
-        contacts = db.query(Contact).filter(
-            Contact.contact_id == user_id,
-            Contact.status == ContactStatus.PENDING
-        ).all()
-        
-        result = []
-        for contact in contacts:
-            contact_user = db.query(User).filter(User.id == contact.user_id).first()
-            if contact_user:
-                result.append(ContactWithUser(
-                    id=contact.id,
-                    contact_id=contact.user_id,  # The requester
-                    contact=UserRead(
-                        id=contact_user.id,
-                        username=contact_user.username,
-                        email=contact_user.email
-                    ),
-                    status=SchemaContactStatus.pending,
-                    created_at=contact.created_at,
-                    updated_at=contact.updated_at
-                ))
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching pending requests: {str(e)}"
-        )
-    finally:
-        db.close()
-
-
-def get_contact_status(user_id: int, contact_id: int) -> Optional[ContactRead]:
-    """
-    Get the status of a contact relationship.
-    
-    Args:
-        user_id: ID of the user
-        contact_id: ID of the contact
-        
-    Returns:
-        ContactRead or None if no relationship exists
-    """
-    db = SessionLocal()
-    try:
-        contact = db.query(Contact).filter(
-            or_(
-                and_(Contact.user_id == user_id, Contact.contact_id == contact_id),
-                and_(Contact.user_id == contact_id, Contact.contact_id == user_id)
-            )
-        ).first()
-        
-        if not contact:
-            return None
-        
-        return ContactRead(
-            id=contact.id,
-            user_id=contact.user_id,
-            contact_id=contact.contact_id,
-            status=SchemaContactStatus(contact.status.value),
-            created_at=contact.created_at,
-            updated_at=contact.updated_at
-        )
-        
-    finally:
-        db.close()
 
