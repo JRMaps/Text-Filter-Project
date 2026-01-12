@@ -15,7 +15,6 @@ from backend.app.conversation.conversation_schema import ConversationType
 def get_all_conversations(current_user_id: int, db: Session) -> List[ConversationDashboardItem]:
     """
     Get all conversations for the current user with last message preview.
-    Note: This does NOT load messages, it only builds the chat list.
 
     Args:
         current_user_id: ID of the current user
@@ -24,7 +23,6 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
         List of conversation summaries with other user info and last message
     """
     try:
-        # Verify user exists
         user = db.query(User).filter(User.id == current_user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -41,7 +39,6 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
 
         # Build dashboard items
         for convo in conversations:
-            # Fetch last message content
             last_message_content = (
                 db.query(Message.content)
                 .filter(Message.id == convo.last_message_id)
@@ -104,6 +101,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
     """
     Get a conversation with all its messages by conversation ID.
     Note: This is called when a user opens a conversation thread.
+
     Args:
         conversation_id: ID of the conversation
         current_user_id: ID of the current user (for access control)
@@ -120,15 +118,14 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
         if not conversation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"
+                detail=f"Conversation with ID {conversation_id} not found"
             )
         
         # Check if current user is a participant
-        user_ids = [p.id for p in conversation.participants]
-        if current_user_id not in user_ids:
+        if not any(participant.id == current_user_id for participant in conversation.participants):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
+                detail="Access denied: You are not a participant in this conversation"
             )
 
         # Get all messages for this conversation, sorted by timestamp
@@ -137,34 +134,26 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
         ).order_by(Message.timestamp.asc()).all()
         
         # Convert messages to MessageRead schema with receipts
-        message_reads = []
-        for msg in messages:
-            # Get receipts for this message
-            receipts = db.query(MessageReceipt).filter(
-                MessageReceipt.message_id == msg.id
-            ).all()
-            
-            receipt_reads = [
-                MessageReceiptRead(
-                    user_id=receipt.user_id,
-                    delivery_status=DeliveryStatus[receipt.delivery_status.name],  # Ensure proper enum handling
-                    delivered_at=receipt.delivered_at,
-                    read_at=receipt.read_at
-                )
-                for receipt in receipts
-            ]
-            
-            message_reads.append(
-                MessageRead(
-                    id=msg.id,
-                    conversation_id=msg.conversation_id,
-                    sender_id=msg.sender_id,
-                    content=msg.content, 
-                    status=ModerationStatus[msg.moderation_status.name],  # Ensure proper enum handling
-                    created_at=msg.timestamp,
-                    receipts=receipt_reads
-                )
+        message_reads = [
+            MessageRead(
+                id=msg.id,
+                conversation_id=msg.conversation_id,
+                sender_id=msg.sender_id,
+                content=msg.content, 
+                moderation_status=ModerationStatus[msg.moderation_status.name],
+                created_at=msg.timestamp,
+                receipts=[
+                    MessageReceiptRead(
+                        user_id=receipt.user_id,
+                        delivery_status=DeliveryStatus[receipt.delivery_status.name],
+                        delivered_at=receipt.delivered_at,
+                        read_at=receipt.read_at
+                    )
+                    for receipt in msg.receipts
+                ]
             )
+            for msg in messages
+        ]
         
         # Build response
         return ConversationWithMessages(
