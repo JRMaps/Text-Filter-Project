@@ -1,4 +1,4 @@
-from parser import Parser
+from backend.app.moderation.parser import Parser
 
 class Ranker:
     def __init__(self, tokens):
