@@ -54,22 +54,6 @@ def send_message(
     conversation_id: Optional[int] = None, 
     receiver_id: Optional[int] = None
 ):
-    """
-    Send a message to a conversation (private or group). Creates a conversation if it doesn't exist.
-    Note: It will be broadcasted via WebSocket after creation.
-
-    Args:
-        sender_id: ID of the user sending the message
-        content: Message content
-        conversation_id: ID of the conversation (optional)
-        receiver_id: ID of the receiver (optional)
-
-        Note: Either conversation_id or receiver_id must be provided, but not both.
-        Different purpose: conversation_id is for existing conversations, receiver_id is for starting new private chats.
-
-    Returns:
-        MessageRead: The created message
-    """
     if not content.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -217,7 +201,7 @@ def send_message(
             conversation_id=new_message.conversation_id,
             sender_id=new_message.sender_id,
             content=new_message.content,
-            status=new_message.moderation_status,
+            moderation_status=new_message.moderation_status,
             created_at=new_message.timestamp,
             receipts=receipt_reads
         )

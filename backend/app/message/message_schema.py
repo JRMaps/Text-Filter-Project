@@ -37,7 +37,7 @@ class MessageRead(MessageBase):
     id: int
     conversation_id: int
     sender_id: int
-    status: ModerationStatus
+    moderation_status: ModerationStatus
     created_at: datetime
     receipts: Optional[List[MessageReceiptRead]] = None
 
