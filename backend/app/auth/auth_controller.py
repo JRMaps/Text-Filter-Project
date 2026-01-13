@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 from backend.app.user.user_model import User
 from backend.app.user.user_schema import UserCreate, UserLogin
 from backend.app.auth.auth_schema import Token
@@ -18,11 +19,19 @@ from sqlalchemy.orm import Session
 
 def register_user(db: Session, user_data: UserCreate) -> dict:
     try:
-        existing_user = db.query(User).filter(
-            (User.email == user_data.email) |
-            (User.username == user_data.username) |
-            (User.phone_number == user_data.phone_number)
-        ).first()
+        conditions = []
+        
+        if user_data.username:
+            conditions.append(User.username == user_data.username)
+        
+        if user_data.email:
+            conditions.append(User.email == user_data.email)
+        
+        if user_data.phone_number:
+            conditions.append(User.phone_number == user_data.phone_number)
+        
+        existing_user = db.query(User).filter(or_(*conditions)).first()
+
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
