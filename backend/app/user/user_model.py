@@ -9,8 +9,8 @@ class User(Base):
     username = Column(String, nullable=False, unique=True)
     email = Column(String, nullable=True, unique=True)
     phone_number = Column(String, nullable=True, unique=True)
-    backup_email = Column(String, nullable=True, unique=True)
-    backup_phone_number = Column(String, nullable=True, unique=True)
+    backup_email = Column(String, nullable=True) 
+    backup_phone_number = Column(String, nullable=True)
     active_status = Column(Boolean, default=True)
     password_hash = Column(String, nullable=False)
     
