@@ -14,13 +14,10 @@ class User(Base):
     active_status = Column(Boolean, default=True)
     password_hash = Column(String, nullable=False)
     
-    # For password reset via OTP with rate limiting and cooldown
+    # For password reset via OTP
     otp_hash = Column(String, nullable=True) 
     password_reset_expires = Column(DateTime, nullable=True)
     otp_verified = Column(Boolean, default=False)
-    otp_attempts = Column(Integer, default=0) 
-    otp_sent_at = Column(DateTime, nullable=True)  
-    otp_locked_until = Column(DateTime, nullable=True)
     
     sent_messages = relationship(
         "Message",

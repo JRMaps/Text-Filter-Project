@@ -102,7 +102,6 @@ def request_password_reset_otp(db: Session, identifier: str) -> dict:
         otp = generate_otp()
         user.otp_hash = hash_otp(otp)
         user.password_reset_expires = now + timedelta(minutes=10)
-        user.otp_attempts = 0
         user.otp_verified = False
 
         db.commit()
@@ -145,11 +144,8 @@ def verify_password_reset_otp(db: Session, identifier: str, otp: str) -> dict:
             raise HTTPException(status_code=400, detail="OTP expired")
 
         if user.otp_hash != hash_otp(otp):
-            user.otp_attempts += 1
-            db.commit()
             raise HTTPException(status_code=400, detail="Invalid OTP")
 
-        # OTP is valid
         user.otp_verified = True
         db.commit()
 
@@ -187,7 +183,6 @@ def reset_password_with_otp(db: Session, identifier: str, new_password: str) -> 
         user.otp_hash = None
         user.otp_verified = False
         user.password_reset_expires = None
-        user.otp_attempts = 0
 
         db.commit()
 
