@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 from backend.app.user.user_model import User
 from backend.app.user.user_schema import UserCreate, UserLogin
 from backend.app.auth.auth_schema import Token
@@ -18,11 +19,19 @@ from sqlalchemy.orm import Session
 
 def register_user(db: Session, user_data: UserCreate) -> dict:
     try:
-        existing_user = db.query(User).filter(
-            (User.email == user_data.email) |
-            (User.username == user_data.username) |
-            (User.phone_number == user_data.phone_number)
-        ).first()
+        conditions = []
+        
+        if user_data.username:
+            conditions.append(User.username == user_data.username)
+        
+        if user_data.email:
+            conditions.append(User.email == user_data.email)
+        
+        if user_data.phone_number:
+            conditions.append(User.phone_number == user_data.phone_number)
+        
+        existing_user = db.query(User).filter(or_(*conditions)).first()
+
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -102,7 +111,6 @@ def request_password_reset_otp(db: Session, identifier: str) -> dict:
         otp = generate_otp()
         user.otp_hash = hash_otp(otp)
         user.password_reset_expires = now + timedelta(minutes=10)
-        user.otp_attempts = 0
         user.otp_verified = False
 
         db.commit()
@@ -145,11 +153,8 @@ def verify_password_reset_otp(db: Session, identifier: str, otp: str) -> dict:
             raise HTTPException(status_code=400, detail="OTP expired")
 
         if user.otp_hash != hash_otp(otp):
-            user.otp_attempts += 1
-            db.commit()
             raise HTTPException(status_code=400, detail="Invalid OTP")
 
-        # OTP is valid
         user.otp_verified = True
         db.commit()
 
@@ -187,7 +192,6 @@ def reset_password_with_otp(db: Session, identifier: str, new_password: str) -> 
         user.otp_hash = None
         user.otp_verified = False
         user.password_reset_expires = None
-        user.otp_attempts = 0
 
         db.commit()
 

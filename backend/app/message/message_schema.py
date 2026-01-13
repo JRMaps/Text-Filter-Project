@@ -15,12 +15,15 @@ class MessageBase(BaseModel):
 
 
 class MessageCreate(MessageBase):
-    conversation_id: Optional[int] = None  # If sending to an existing conversation
-    receiver_id: Optional[int] = None  # If starting a new conversation
+    conversation_id: Optional[int] = None  
+    receiver_id: Optional[int] = None
 
     def validate(self):
         if not self.conversation_id and not self.receiver_id:
             raise ValueError("Either conversation_id or receiver_id must be provided.")
+        
+        if self.conversation_id and self.receiver_id:
+            raise ValueError("Only one of conversation_id or receiver_id should be provided.")
 
 
 class MessageReceiptRead(BaseModel):
