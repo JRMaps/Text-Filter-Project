@@ -9,7 +9,7 @@ from backend.app.user.user_schema import UserRead, UserUpdate
 
 def search_user(query: str, db: Session) -> List[UserRead]:
     """
-    Search for users by username or email.
+    Search for users by username.
     
     Args:
         query: Search query string
@@ -25,15 +25,11 @@ def search_user(query: str, db: Session) -> List[UserRead]:
         )
     
     try:
-        # Search by username or email (case-insensitive partial match)
+        # Search by username (case-insensitive partial match)
         search_term = f"%{query.strip()}%"
         users = db.query(User).filter(
-            or_(
-                User.username.ilike(search_term),
-                User.email.ilike(search_term),
-                User.phone_number.ilike(search_term)
-            )
-        ).limit(50).all()  # Limit results to 50
+            User.username.ilike(search_term)
+        ).limit(50).all()
         
         return [
             UserRead(
