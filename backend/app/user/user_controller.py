@@ -111,38 +111,6 @@ def edit_user_profile(user_id: int, user_update: UserUpdate, db: Session) -> Use
         
         update_data = user_update.model_dump(exclude_unset=True)
         
-        # Restrict updates to backup_email, backup_phone_number, and username
-        allowed_fields = {"backup_email", "backup_phone_number", "username"}
-        for field in update_data.keys():
-            if field not in allowed_fields:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Field '{field}' cannot be updated"
-                )
-        
-        if "backup_email" in update_data:
-            existing_user = db.query(User).filter(
-                User.backup_email == update_data["backup_email"],
-                User.id != user_id
-            ).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Backup email already in use"
-                )
-        
-        if "backup_phone_number" in update_data:
-            existing_user = db.query(User).filter(
-                User.backup_phone_number == update_data["backup_phone_number"],
-                User.id != user_id
-            ).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Backup phone number already in use"
-                )
-        
-        # Update user fields
         for field, value in update_data.items():
             setattr(user, field, value)
         
