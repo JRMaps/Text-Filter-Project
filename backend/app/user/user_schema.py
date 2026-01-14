@@ -48,3 +48,6 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     backup_email: Optional[EmailStr] = None
     backup_phone_number: Optional[str] = None
+
+    if not username and not backup_email and not backup_phone_number:
+        raise ValueError("No field to update provided.")

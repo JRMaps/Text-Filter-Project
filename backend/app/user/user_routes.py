@@ -24,12 +24,12 @@ async def get_current_user_info(
 
 @router.get("/search", response_model=List[UserRead])
 async def get_search_user(
-    query: str = Query(..., min_length=1),
+    username: str = Query(..., min_length=1),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Search for users by username or email."""
-    return search_user(query, db)
+    """Search for users by username"""
+    return search_user(username, db)
 
 
 @router.get("/{user_id}", response_model=UserRead)
