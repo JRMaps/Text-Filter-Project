@@ -5,11 +5,10 @@ from typing import List
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message
 from backend.app.message.message_receipt_model import MessageReceipt
-from backend.app.conversation.conversation_model import Conversation, conversation_participants
+from backend.app.conversation.conversation_model import Conversation, conversation_participants, ConversationType
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead
 from backend.app.message.message_schema import MessageRead, MessageReceiptRead, DeliveryStatus, ModerationStatus
 from backend.app.user.user_schema import UserRead
-from backend.app.conversation.conversation_schema import ConversationType
 
 
 def get_all_conversations(current_user_id: int, db: Session) -> List[ConversationDashboardItem]:
@@ -27,7 +26,6 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Fetch conversations where user is a participant
         conversations = (
             db.query(Conversation)
             .join(conversation_participants)
@@ -39,15 +37,16 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
 
         # Build dashboard items
         for convo in conversations:
-            last_message_content = (
-                db.query(Message.content)
-                .filter(Message.id == convo.last_message_id)
-                .scalar()
-                if convo.last_message_id else None
-            )
+            last_message = db.query(Message).filter(
+                Message.id == convo.last_message_id,
+            ).first()
 
-            if convo.type == ConversationType.PRIVATE:
-                # Get the other user in private conversations
+            last_message_content = last_message.content if last_message else None
+            last_message_moderation_status = last_message.moderation_status if last_message else None
+
+            convo_type = convo.type.value.lower()
+
+            if convo_type == ConversationType.PRIVATE.value:
                 other_user = next(
                     (p for p in convo.participants if p.id != current_user_id),
                     None
@@ -58,20 +57,25 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
                 dashboard.append(
                     PrivateConversationDashboardItem(
                         id=convo.id,
-                        type=ConversationType.PRIVATE,
+                        type=convo_type,
                         updated_at=convo.updated_at,
-                        last_message=last_message_content,
+                        last_message={
+                            "content": last_message_content,
+                            "moderation_status": last_message_moderation_status
+                        },
                         other_user=other_user
                     )
                 )
-            else:
-                # Add group conversation details
+            elif convo_type == ConversationType.GROUP.value:
                 dashboard.append(
                     GroupConversationDashboardItem(
                         id=convo.id,
-                        type=ConversationType.GROUP,
+                        type=convo_type,
                         updated_at=convo.updated_at,
-                        last_message=last_message_content,
+                        last_message={
+                            "content": last_message_content,
+                            "moderation_status": last_message_moderation_status
+                        },
                         group_name=convo.group_name,
                         member_count=len(convo.participants),
                         participants=[
@@ -84,7 +88,7 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
                     )
                 )
 
-        # Sort by latest activity
+
         dashboard.sort(key=lambda x: x.updated_at, reverse=True)
         return dashboard
 
