@@ -4,6 +4,7 @@ from datetime import datetime
 from backend.app.message.message_schema import MessageRead
 from backend.app.user.user_schema import UserRead 
 from enum import Enum
+from backend.app.message.message_model import ModerationStatus
 
 class ConversationType(str, Enum):
     PRIVATE = "private"
@@ -40,7 +41,6 @@ class ConversationParticipantRead(BaseModel):
 class ConversationRead(BaseModel):
     id: int
 
-    # Users are returned as objects (not IDs)
     participants: List[ConversationParticipantRead]
 
     group_name: Optional[str]
@@ -56,11 +56,20 @@ class ConversationWithMessages(ConversationRead):
     messages: List[MessageRead]
 
 
+class LastMessage(BaseModel):
+    content: Optional[str]
+    moderation_status: Optional[ModerationStatus]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class ConversationDashboardItem(BaseModel):
     id: int
     type: ConversationType
     updated_at: datetime
-    last_message: Optional[str]
+    last_message: Optional[LastMessage]
 
     model_config = {
         "from_attributes": True
@@ -74,7 +83,7 @@ class PrivateConversationDashboardItem(ConversationDashboardItem):
 
 class GroupConversationDashboardItem(ConversationDashboardItem):
     type: Literal[ConversationType.GROUP]
-    group_name: str
+    group_name: Optional[str]
     member_count: int
     participants: List[ConversationParticipantRead]
 
