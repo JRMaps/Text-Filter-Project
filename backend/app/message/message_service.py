@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message, ModerationStatus
 from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
-from backend.app.conversation.conversation_model import Conversation
+from backend.app.conversation.conversation_model import Conversation, ConversationType
 from backend.app.message.message_schema import MessageRead, MessageReceiptRead
 from typing import Optional
 from backend.app.moderation.normalizationV1 import normalization
@@ -36,9 +36,8 @@ def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Co
 
     new_conversation = Conversation()
     db.add(new_conversation)
-    db.flush()  # Get the ID
+    db.flush()
 
-    # Add participants
     new_conversation.participants.append(sender)
     new_conversation.participants.append(receiver)
     db.commit()
@@ -105,7 +104,17 @@ def send_message(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Receiver not found"
                 )
-            conversation = create_new_conversation(db, sender_id, receiver_id)
+            
+            # Handle cases where the frontend mistakenly sends a receiver_id instead of a conversation_id.
+            existing_conversation = db.query(Conversation).filter(
+                Conversation.participants.any(id=sender_id),
+                Conversation.participants.any(id=receiver_id),
+                Conversation.type == ConversationType.PRIVATE
+            ).first()
+            if existing_conversation:
+                conversation = existing_conversation
+            else:
+                conversation = create_new_conversation(db, sender_id, receiver_id)
 
 
         # Message Moderation Pipeline (filter before sending)
@@ -133,7 +142,6 @@ def send_message(
             sender_id=sender_id,
             content=content,
             moderation_status=moderation_status,
-            delivery_status=ReceiptDeliveryStatus.SENT,
             severity_score=severity_score,
             timestamp=datetime.utcnow()
         )
@@ -193,7 +201,7 @@ def send_message(
             participant_ids=participant_ids,
             conversation_id=conversation.id,
             last_message=conversation.last_message_id,
-            updated_at=new_message.created_at.isoformat()
+            updated_at=new_message.timestamp.isoformat()
         )
 
         return MessageRead(

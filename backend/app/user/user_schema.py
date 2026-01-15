@@ -49,5 +49,8 @@ class UserUpdate(BaseModel):
     backup_email: Optional[EmailStr] = None
     backup_phone_number: Optional[str] = None
 
-    if not username and not backup_email and not backup_phone_number:
-        raise ValueError("No field to update provided.")
+    @model_validator(mode="after")
+    def validate_update_fields(self):
+        if not (self.username or self.backup_email or self.backup_phone_number):
+            raise ValueError("No field to update provided.")
+        return self
