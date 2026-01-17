@@ -114,7 +114,6 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
         ConversationWithMessages: The conversation with all messages
     """
     try:
-        # Get conversation
         conversation = db.query(Conversation).filter(
             Conversation.id == conversation_id
         ).first()
@@ -125,14 +124,12 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
                 detail=f"Conversation with ID {conversation_id} not found"
             )
         
-        # Check if current user is a participant
         if not any(participant.id == current_user_id for participant in conversation.participants):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: You are not a participant in this conversation"
             )
 
-        # Get all messages for this conversation, sorted by timestamp
         messages = db.query(Message).filter(
             Message.conversation_id == conversation_id
         ).order_by(Message.timestamp.asc()).all()
@@ -159,7 +156,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
             for msg in messages
         ]
         
-        # Build response
+        
         return ConversationWithMessages(
             id=conversation.id,
             participants=[
@@ -169,6 +166,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
                 )
                 for participant in conversation.participants
             ],
+            group_name=conversation.group_name,
             last_message_id=conversation.last_message_id,
             updated_at=conversation.updated_at,
             messages=message_reads
