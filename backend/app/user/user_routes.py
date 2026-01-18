@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/profile", response_model=UserRead)
-async def get_current_user_info(
+async def api_current_user_info(
     current_user: User = Depends(get_current_user),
 ):
     """Get the current authenticated user's information."""
@@ -23,7 +23,7 @@ async def get_current_user_info(
 
 
 @router.get("/search", response_model=List[UserRead])
-async def get_search_user(
+async def api_search_user(
     username: str = Query(..., min_length=1),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -33,7 +33,7 @@ async def get_search_user(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-async def get_user_profile(
+async def api_user_profile(
     user_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -43,7 +43,7 @@ async def get_user_profile(
 
 
 @router.put("/profile/edit", response_model=UserRead)
-async def update_user_profile(
+async def api_update_user_profile(
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
