@@ -25,7 +25,6 @@ class Message(Base):
 
     content = Column(Text, nullable=False)
 
-    # Moderation filtering status
     moderation_status = Column(
         SQLEnum(ModerationStatus),
         default=ModerationStatus.ALLOWED
@@ -43,6 +42,7 @@ class Message(Base):
 
     conversation = relationship(
         "Conversation",
+        foreign_keys=[conversation_id],
         back_populates="messages"
     )
 
