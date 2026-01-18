@@ -40,8 +40,16 @@ class Conversation(Base):
         backref="conversations"
     )
 
+    
     messages = relationship(
         "Message",
+        foreign_keys="Message.conversation_id",
         back_populates="conversation",
         cascade="all, delete-orphan"
+    )
+    
+    last_message = relationship(
+        "Message",
+        foreign_keys=[last_message_id],
+        post_update=True 
     )
