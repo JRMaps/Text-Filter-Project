@@ -1,12 +1,12 @@
 from datetime import datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message
 from backend.app.message.message_receipt_model import MessageReceipt
 from backend.app.conversation.conversation_model import Conversation, conversation_participants, ConversationType
-from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead
+from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages, PrivateConversationDashboardItem, GroupConversationDashboardItem, ConversationParticipantRead, GroupConversationCreateResponse
 from backend.app.message.message_schema import MessageRead, MessageReceiptRead, DeliveryStatus, ModerationStatus
 from backend.app.user.user_schema import UserRead
 
@@ -63,7 +63,10 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
                             "content": last_message_content,
                             "moderation_status": last_message_moderation_status
                         },
-                        other_user=other_user
+                        other_user=ConversationParticipantRead(
+                            id=other_user.id,
+                            username=other_user.username
+                        )
                     )
                 )
             elif convo_type == ConversationType.GROUP.value:
@@ -114,7 +117,6 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
         ConversationWithMessages: The conversation with all messages
     """
     try:
-        # Get conversation
         conversation = db.query(Conversation).filter(
             Conversation.id == conversation_id
         ).first()
@@ -125,14 +127,12 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
                 detail=f"Conversation with ID {conversation_id} not found"
             )
         
-        # Check if current user is a participant
         if not any(participant.id == current_user_id for participant in conversation.participants):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: You are not a participant in this conversation"
             )
 
-        # Get all messages for this conversation, sorted by timestamp
         messages = db.query(Message).filter(
             Message.conversation_id == conversation_id
         ).order_by(Message.timestamp.asc()).all()
@@ -159,7 +159,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
             for msg in messages
         ]
         
-        # Build response
+
         return ConversationWithMessages(
             id=conversation.id,
             participants=[
@@ -169,6 +169,7 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
                 )
                 for participant in conversation.participants
             ],
+            group_name=conversation.group_name,
             last_message_id=conversation.last_message_id,
             updated_at=conversation.updated_at,
             messages=message_reads
@@ -180,4 +181,79 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int, db: Sessi
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching conversation: {str(e)}"
+        )
+
+
+def create_group_chat(
+    db: Session,
+    creator_id: int,
+    participant_ids: List[int],
+    group_name: Optional[str] = None
+) -> GroupConversationCreateResponse:
+    """
+    Create a new group chat conversation.
+
+    Args:
+        db: Database session
+        creator_id: ID of the user creating the group chat
+        participant_ids: List of user IDs to add to the group chat
+        group_name: Name of the group chat (optional)
+
+    Returns:
+        GroupConversationCreateResponse: The created group chat conversation with details
+    """
+    try:
+        participant_ids = list(set(participant_ids))
+        if creator_id not in participant_ids:
+            participant_ids.append(creator_id)
+
+        if len(participant_ids) < 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A group chat must have at least 3 participants (including the creator)."
+            )
+
+        participants = db.query(User).filter(User.id.in_(participant_ids)).all()
+
+        if len(participants) != len(participant_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="One or more participant IDs are invalid"
+            )
+
+        new_conversation = Conversation(
+            type=ConversationType.GROUP,
+            group_name=group_name,
+            updated_at=datetime.utcnow()
+        )
+        db.add(new_conversation)
+        db.flush()
+
+        new_conversation.participants.extend(participants)
+        db.commit()
+        db.refresh(new_conversation)
+
+
+        return GroupConversationCreateResponse(
+            id=new_conversation.id,
+            group_name=new_conversation.group_name,
+            created_by=creator_id,
+            type=new_conversation.type,
+            created_at=new_conversation.updated_at,
+            participants=[
+                ConversationParticipantRead(
+                    id=participant.id,
+                    username=participant.username
+                )
+                for participant in new_conversation.participants
+            ]
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating group chat: {str(e)}"
         )

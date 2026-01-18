@@ -78,7 +78,7 @@ class ConversationDashboardItem(BaseModel):
 
 class PrivateConversationDashboardItem(ConversationDashboardItem):
     type: Literal[ConversationType.PRIVATE]
-    other_user: UserRead
+    other_user: ConversationParticipantRead
 
 
 class GroupConversationDashboardItem(ConversationDashboardItem):
@@ -86,6 +86,30 @@ class GroupConversationDashboardItem(ConversationDashboardItem):
     group_name: Optional[str]
     member_count: int
     participants: List[ConversationParticipantRead]
+
+
+class GroupConversationCreateRequest(BaseModel):
+    participant_ids: List[int] = Field(..., min_items=1, description="List of participant IDs (excluding creator)")
+    group_name: Optional[str] = Field(None, description="Name of the group chat")
+
+    @model_validator(mode="after")
+    def validate_participants(self):
+        if len(set(self.participant_ids)) < 2:
+            raise ValueError("A group chat must have at least 2 unique participants (excluding the creator).")
+        return self
+
+
+class GroupConversationCreateResponse(BaseModel):
+    id: int
+    group_name: Optional[str]
+    created_by: int
+    type: ConversationType
+    created_at: datetime
+    participants: List[ConversationParticipantRead]
+
+    model_config = {
+        "from_attributes": True
+    }
 
 
 ConversationDashboardResponse = Annotated[

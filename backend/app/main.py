@@ -5,26 +5,17 @@ from backend.app.conversation import conversation_routes
 from backend.app.database.database import create_tables
 from backend.app.user import user_routes
 from backend.app.contact import contact_routes
-from backend.app.websocket.websocket_route import ws_chat
+from backend.app.websocket import websocket_route
 
 app = FastAPI()
 
-# Create tables on application startup
 @app.on_event("startup")
 async def startup_event():
     create_tables()
 
-# test
-@app.get("/")
-async def get_app():
-    return {"message": "Hello, World!"}
-
-# Include routers
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(message_routes.router, prefix="/api/messages", tags=["messages"])
 app.include_router(conversation_routes.router, prefix="/api", tags=["conversations"])
 app.include_router(user_routes.router, prefix="/api/users", tags=["users"])
 app.include_router(contact_routes.router, prefix="/api/contacts", tags=["contacts"])
-
-# WebSocket route
-app.websocket("/ws")(ws_chat)
+app.include_router(websocket_route.router, prefix="", tags=["websocket"])
