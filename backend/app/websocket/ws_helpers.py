@@ -1,7 +1,6 @@
 from typing import List, Set
 from backend.app.database.database import SessionLocal
 from backend.app.contact.contact_model import Contact, ContactStatus
-from backend.app.conversation.conversation_model import Conversation, conversation_participants
 
 def get_user_contact_ids(user_id: int) -> Set[int]:
     """

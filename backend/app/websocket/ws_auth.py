@@ -1,5 +1,5 @@
 from fastapi import WebSocket, HTTPException, status
-from backend.app.auth.auth_utils import verify_token, get_user_by_email
+from backend.app.auth.auth_utils import verify_token, get_user_by_email_or_phone
 from backend.app.user.user_model import User
 
 async def get_user_from_websocket(websocket: WebSocket) -> User:
@@ -48,7 +48,7 @@ async def get_user_from_websocket(websocket: WebSocket) -> User:
         raise
     
     # Get user from database
-    user = get_user_by_email(email)
+    user = get_user_by_email_or_phone(email)
     if user is None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         raise HTTPException(
