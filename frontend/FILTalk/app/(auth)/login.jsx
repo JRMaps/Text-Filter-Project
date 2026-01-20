@@ -43,10 +43,10 @@ const LoginScreen = () => {
       // await authApi.login(loginData);
 
       // Temporary: Skip API call for UI testing
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Fake delay
+      await new Promise(resolve => setTimeout(resolve, 500)); // Fake delay
 
       // Navigate immediately after successful login
-      router.replace("/(tabs)/messages" as Href);
+      router.replace("/(tabs)/messages");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed";
       Alert.alert("Error", message);

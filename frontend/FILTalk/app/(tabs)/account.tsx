@@ -17,8 +17,8 @@ const AccountScreen = () => {
 
   // User profile state - will be populated by backend API
   const [userProfile] = useState({
-    name: "Lorem ipsum dolor",
-    email: "lorem@gmail.com",
+    name: "Ivan Dela Cruz",
+    email: "ivan.delacruz@gmail.com",
     phone: "09231734621",
   });
 
@@ -111,14 +111,7 @@ const AccountScreen = () => {
               ]}
               activeOpacity={0.7}
             >
-              <Image
-                source={item.icon}
-                style={
-                  item.label === "Privacy"
-                    ? styles.menuIconLarge
-                    : styles.menuIcon
-                }
-              />
+              <Image source={item.icon} style={styles.menuIcon} />
               <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -147,31 +140,31 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 15,
+    paddingTop: 5,
+    paddingBottom: 10,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 44,
     fontWeight: "bold",
     color: "#f6ca15",
     fontFamily: Fonts.regular,
   },
   editButton: {
     backgroundColor: "#f6ca15",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   editButtonText: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: "600",
-    color: "#000",
+    color: "#0039a9",
     fontFamily: Fonts.regular,
   },
   profileSection: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 10,
     alignItems: "center",
   },
   avatar: {
@@ -207,20 +200,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 24,
+    fontSize: 40,
     fontWeight: "bold",
     color: "#000",
     marginBottom: 4,
     fontFamily: Fonts.regular,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 20,
     color: "#999",
     marginBottom: 2,
     fontFamily: Fonts.regular,
   },
   profilePhone: {
-    fontSize: 14,
+    fontSize: 20,
     color: "#999",
     fontFamily: Fonts.regular,
   },
@@ -246,20 +239,14 @@ const styles = StyleSheet.create({
     borderBottomColor: "#D0D0D0",
   },
   menuIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
-    resizeMode: "contain",
-  },
-  menuIconLarge: {
     width: 28,
-    height: 28,
+    height: 30,
     marginRight: 12,
     resizeMode: "contain",
   },
   menuLabel: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: "500",
     color: "#000",
     fontFamily: Fonts.regular,
@@ -272,15 +259,15 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: "#cd1127",
-    marginHorizontal: 20,
-    marginTop: 20,
-    paddingVertical: 14,
+    marginHorizontal: 120,
+    marginTop: 50,
+    paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
   },
   logoutButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 28,
     fontWeight: "600",
     fontFamily: Fonts.regular,
   },

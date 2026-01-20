@@ -17,7 +17,7 @@ import { ContactProvider } from "@/context/ContactContext";
 SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: "(auth)",
 };
 
 export default function RootLayout() {
@@ -43,7 +43,10 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="edit" options={{ headerShown: false }} />
-          <Stack.Screen name="passwordRecovery" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="passwordRecovery"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="passwordCode" options={{ headerShown: false }} />
           <Stack.Screen
             name="contactProfile"
