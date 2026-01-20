@@ -92,14 +92,14 @@ export const ContactProvider = ({ children }: { children: ReactNode }) => {
   ]);
 
   const [selectedContact, setSelectedContact] = useState<ContactData | null>(
-    null
+    null,
   );
 
   const updateContact = (updatedContact: ContactData) => {
     setContacts((prev) =>
       prev.map((contact) =>
-        contact.id === updatedContact.id ? updatedContact : contact
-      )
+        contact.id === updatedContact.id ? updatedContact : contact,
+      ),
     );
     if (selectedContact?.id === updatedContact.id) {
       setSelectedContact(updatedContact);
