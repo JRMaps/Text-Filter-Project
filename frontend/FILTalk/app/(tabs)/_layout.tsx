@@ -26,14 +26,13 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: "#fff",
             elevation: 8,
-
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: 0.25,
             shadowRadius: 10,
-            height: 80,
-            paddingBottom: 10,
-            paddingTop: 12,
-            marginHorizontal: 70,
+            height: 70,
+            paddingBottom: 20,
+            paddingTop: 10,
+            marginHorizontal: 90,
             marginBottom: 35,
             borderRadius: 40,
             position: "absolute",
@@ -42,10 +41,11 @@ export default function TabLayout() {
             right: 0,
             justifyContent: "center",
             alignItems: "center",
+            borderTopWidth: 0,
           },
           tabBarLabelStyle: {
-            fontSize: 14,
-            marginTop: 8,
+            fontSize: 12,
+            marginTop: 4,
             fontWeight: "500",
             fontFamily: Fonts.regular,
           },
@@ -121,6 +121,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F5F5F5",
   },
   tabIcon: {
     width: 36,
