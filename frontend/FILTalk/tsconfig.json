@@ -13,6 +13,7 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "app/(tabs)/messages.jsx",
+    "app/(tabs)/chat.tsx",
     "app/_layout.jsx",
     "app/(tabs)/_layout.jsx",
     "app/(auth)/register.jsx",

@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter, Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -64,8 +65,21 @@ const sampleMessages = [
 ];
 
 const MessagesScreen = () => {
+  const router = useRouter();
+
+  const handleMessagePress = (item: (typeof sampleMessages)[0]) => {
+    router.push({
+      pathname: "/chat",
+      params: { name: item.name, id: item.id },
+    } as Href);
+  };
+
   const renderMessage = ({ item }: { item: (typeof sampleMessages)[0] }) => (
-    <TouchableOpacity style={styles.messageItem} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.messageItem}
+      activeOpacity={0.7}
+      onPress={() => handleMessagePress(item)}
+    >
       <View style={styles.avatar}>
         <Image
           source={require("@/assets/images/account.png")}
