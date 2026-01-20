@@ -36,27 +36,42 @@ const sampleMessages = [
   },
   {
     id: "2",
+    name: "Sia Antoriano",
+    lastMessage: "Masaya naman dito!",
+    time: "2:25 PM",
+    unread: 3,
+  },
+  {
+    id: "3",
+    name: "Celebes Dimautang",
+    lastMessage: "Ganun naman talaga..",
+    time: "10:30 AM",
+    unread: 1,
+  },
+
+  {
+    id: "4",
     name: "Maria Santos",
     lastMessage: "Sige, see you tomorrow!",
     time: "1:15 PM",
     unread: 0,
   },
   {
-    id: "3",
+    id: "5",
     name: "Pedro Garcia",
     lastMessage: "Okay lang, salamat!",
     time: "11:45 AM",
     unread: 5,
   },
   {
-    id: "4",
+    id: "6",
     name: "Ana Reyes",
     lastMessage: "Nagtext ka ba kanina?",
     time: "Yesterday",
     unread: 0,
   },
   {
-    id: "5",
+    id: "7",
     name: "Carlos Mendoza",
     lastMessage: "Ingat palagi!",
     time: "Yesterday",
@@ -153,7 +168,17 @@ const MessagesScreen = () => {
           contentContainerStyle={styles.onlineContactsContent}
         >
           {onlineContacts.map((contact) => (
-            <TouchableOpacity key={contact.id} style={styles.onlineContact}>
+            <TouchableOpacity
+              key={contact.id}
+              style={styles.onlineContact}
+              // ADDED THIS ONPRESS:
+              onPress={() =>
+                router.push({
+                  pathname: "/chat",
+                  params: { name: contact.name, id: contact.id },
+                } as Href)
+              }
+            >
               <View style={styles.onlineAvatarContainer}>
                 <View style={styles.onlineAvatar}>
                   <Image
@@ -175,7 +200,7 @@ const MessagesScreen = () => {
           data={sampleMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />
@@ -230,12 +255,13 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
   },
   onlineContactsContainer: {
-    maxHeight: 120,
-    marginBottom: -20,
+    maxHeight: 130,
+    marginBottom: 10,
   },
   onlineContactsContent: {
     paddingHorizontal: 20,
     gap: 15,
+    paddingBottom: 40,
   },
   onlineContact: {
     alignItems: "center",
@@ -243,7 +269,7 @@ const styles = StyleSheet.create({
   },
   onlineAvatarContainer: {
     position: "relative",
-    marginBottom: 5,
+    marginBottom: 10,
   },
   onlineAvatar: {
     width: 60,
