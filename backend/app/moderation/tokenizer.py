@@ -3,6 +3,7 @@ from backend.app.moderation.normalizationV1 import normalization
 
 TOKEN_OFFENSIVE = "OFFENSIVE"
 TOKEN_PRONOUN   = "PRONOUN"
+TOKEN_LINK      = "LINK"    
 TOKEN_WORD      = "WORD"
 TOKEN_UNKNOWN   = "UNKNOWN"
 
@@ -19,12 +20,16 @@ PRONOUNS = {
     "nila", "namin", "ninyo", "tayo", "ikaw"
 }
 
-VOCAB = OFFENSIVE_ROOTS | PRONOUNS
+# ✅ NEW (minimal)
+LINK_WORDS = {"ay"}
+
+# ✅ Extend vocab for recursive splitter
+VOCAB = OFFENSIVE_ROOTS | PRONOUNS | LINK_WORDS
 
 WORD_PATTERN = re.compile(r'^[a-z]+$')
 
 
-# 🔹 Recursive splitter
+# 🔹 Recursive splitter (unchanged)
 def split_lexeme(text):
     results = []
 
@@ -50,23 +55,28 @@ def tokenize(text):
         # direct match
         if lex in OFFENSIVE_ROOTS:
             tokens.append((TOKEN_OFFENSIVE, lex))
+
         elif lex in PRONOUNS:
             tokens.append((TOKEN_PRONOUN, lex))
+
+        elif lex in LINK_WORDS:           
+            tokens.append((TOKEN_LINK, lex))
+
         elif WORD_PATTERN.fullmatch(lex):
-            # try recursive split
             splits = split_lexeme(lex)
             if splits:
-                # take the first valid split (greedy)
+                # greedy first split
                 for part in splits[0]:
                     if part in OFFENSIVE_ROOTS:
                         tokens.append((TOKEN_OFFENSIVE, part))
                     elif part in PRONOUNS:
                         tokens.append((TOKEN_PRONOUN, part))
+                    elif part in LINK_WORDS:
+                        tokens.append((TOKEN_LINK, part))
             else:
                 tokens.append((TOKEN_WORD, lex))
         else:
             tokens.append((TOKEN_UNKNOWN, lex))
 
     return tokens
-
 
