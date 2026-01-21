@@ -10,22 +10,9 @@ OFFENSIVE_ROOTS = {
     "puta", "putang", "ina",
     "gago", "bobo", "tanga", "yawa",
     "pakshet", "leche", "tarantado",
-    "chupa", "puki", "puke"
+    "chupa", "puki", "puke", "ulol",
+    "putangina"
 }
-
-PREFIXES = {"pinag", "pag", "mag", "ma", "na", "pa"}
-SUFFIXES = {"han", "hin", "an", "ng"}
-
-PREFIX_PATTERN = r'(' + '|'.join(PREFIXES) + r')?'
-ROOT_PATTERN   = r'(' + '|'.join(OFFENSIVE_ROOTS) + r')'
-SUFFIX_PATTERN = r'(' + '|'.join(SUFFIXES) + r')?'
-
-OFFENSIVE_PATTERN = re.compile(
-    rf'^{PREFIX_PATTERN}{ROOT_PATTERN}{SUFFIX_PATTERN}$',
-    re.IGNORECASE
-)
-
-WORD_PATTERN = re.compile(r'^[a-z]+$')
 
 PRONOUNS = {
     "ka", "mo", "kayo", "siya", "niya",
@@ -34,66 +21,52 @@ PRONOUNS = {
 
 VOCAB = OFFENSIVE_ROOTS | PRONOUNS
 
+WORD_PATTERN = re.compile(r'^[a-z]+$')
 
-# 🔁 Recursive splitter
-def split_recursively(text, pos=0, path=None, results=None):
-    if path is None:
-        path = []
-    if results is None:
-        results = []
 
-    if pos == len(text):
-        results.append(path)
-        return results
+# 🔹 Recursive splitter
+def split_lexeme(text):
+    results = []
 
-    for word in sorted(VOCAB, key=len, reverse=True):
-        if text.startswith(word, pos):
-            split_recursively(
-                text,
-                pos + len(word),
-                path + [word],
-                results
-            )
+    def backtrack(pos, path):
+        if pos == len(text):
+            results.append(path)
+            return
 
+        for word in sorted(VOCAB, key=len, reverse=True):
+            if text.startswith(word, pos):
+                backtrack(pos + len(word), path + [word])
+
+    backtrack(0, [])
     return results
 
 
-def tokenize(text: str):
+def tokenize(text):
     tokens = []
-    normalized_text = normalization(text)
-    lexemes = normalized_text.split()
+    normalized = normalization(text)
+    lexemes = normalized.split()
 
-    for lexeme in lexemes:
-        # 1️⃣ direct offensive match
-        if OFFENSIVE_PATTERN.fullmatch(lexeme):
-            tokens.append((TOKEN_OFFENSIVE, lexeme))
-            continue
-
-        # 2️⃣ pronoun
-        if lexeme in PRONOUNS:
-            tokens.append((TOKEN_PRONOUN, lexeme))
-            continue
-
-        # 3️⃣ recursive split attempt
-        if WORD_PATTERN.fullmatch(lexeme):
-            splits = split_recursively(lexeme)
-
+    for lex in lexemes:
+        # direct match
+        if lex in OFFENSIVE_ROOTS:
+            tokens.append((TOKEN_OFFENSIVE, lex))
+        elif lex in PRONOUNS:
+            tokens.append((TOKEN_PRONOUN, lex))
+        elif WORD_PATTERN.fullmatch(lex):
+            # try recursive split
+            splits = split_lexeme(lex)
             if splits:
-                # choose longest valid split (best signal)
-                best = max(splits, key=len)
-
-                for part in best:
+                # take the first valid split (greedy)
+                for part in splits[0]:
                     if part in OFFENSIVE_ROOTS:
                         tokens.append((TOKEN_OFFENSIVE, part))
                     elif part in PRONOUNS:
                         tokens.append((TOKEN_PRONOUN, part))
-                continue
-
-            tokens.append((TOKEN_WORD, lexeme))
-            continue
-
-        # 4️⃣ fallback
-        tokens.append((TOKEN_UNKNOWN, lexeme))
+            else:
+                tokens.append((TOKEN_WORD, lex))
+        else:
+            tokens.append((TOKEN_UNKNOWN, lex))
 
     return tokens
+
 

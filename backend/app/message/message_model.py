@@ -32,6 +32,8 @@ class Message(Base):
 
     severity_score = Column(Integer)
 
+    masked_words = Column(JSON, nullable=True)
+
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     sender = relationship(

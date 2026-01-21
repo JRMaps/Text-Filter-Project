@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from backend.app.user.user_model import User
 from backend.app.message.message_model import Message, ModerationStatus
 from backend.app.message.message_receipt_model import MessageReceipt, DeliveryStatus as ReceiptDeliveryStatus
-from backend.app.conversation.conversation_model import Conversation, ConversationType
+from backend.app.conversation.conversation_model import Conversation, ConversationType, ProfanityWordTracking, ConversationUserMute
 from backend.app.message.message_schema import MessageRead, MessageReceiptRead
 from typing import Optional
 from backend.app.moderation.normalizationV1 import normalization
@@ -13,6 +13,9 @@ from backend.app.moderation.rank import Ranker
 from backend.app.websocket.connection_manager import manager
 
 
+#--------------------#
+#   HELPER METHODS   #
+#--------------------#
 def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Conversation:
     """
     Create a new conversation between two users.
@@ -46,6 +49,43 @@ def create_new_conversation(db: Session, sender_id: int, receiver_id: int) -> Co
     return new_conversation
 
 
+def reset_expired_mutes(db: Session, conversation_id: int, user_id: int):
+    """
+    Reset profanity counts and conversation mutes after the mute duration has expired.
+
+    Args:
+        db: Database session
+        conversation_id: ID of the conversation
+        user_id: ID of the user
+    """
+    # Reset expired word-level mutes
+    expired_word_mutes = db.query(ProfanityWordTracking).filter(
+        ProfanityWordTracking.conversation_id == conversation_id,
+        ProfanityWordTracking.user_id == user_id,
+        ProfanityWordTracking.muted_until < datetime.utcnow()
+    ).all()
+
+    for record in expired_word_mutes:
+        record.count = 0
+        record.muted_until = None
+
+    # Reset expired conversation-level mutes
+    expired_conversation_mutes = db.query(ConversationUserMute).filter(
+        ConversationUserMute.conversation_id == conversation_id,
+        ConversationUserMute.user_id == user_id,
+        ConversationUserMute.muted_until < datetime.utcnow()
+    ).all()
+
+    for record in expired_conversation_mutes:
+        record.profanity_count = 0
+        record.muted_until = None
+
+    db.commit()
+
+
+#--------------------#
+#   API METHODS      #
+#--------------------#
 def send_message(
     db: Session,
     sender_id: int,
@@ -117,25 +157,129 @@ def send_message(
                 conversation = create_new_conversation(db, sender_id, receiver_id)
 
 
+        reset_expired_mutes(db, conversation.id, sender_id)
+
+        user_mute = db.query(ConversationUserMute).filter(
+            ConversationUserMute.conversation_id == conversation.id,
+            ConversationUserMute.user_id == sender_id,
+            ConversationUserMute.muted_until > datetime.utcnow()
+        ).first()
+        if user_mute:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are temporarily muted in this conversation."
+            )
+
         # Message Moderation Pipeline (filter before sending)
         normalized_content = normalization(content)
         tokens = tokenize(normalized_content)
-        ranker = Ranker(tokens)
+        ranker = Ranker(tokens, muted_words=conversation.muted_words)
         severity_score = ranker.calculate_severity()
+        offensive_spans = ranker.offensive_spans
 
-        if severity_score == 0:
-            moderation_status = ModerationStatus.ALLOWED
-        else:
-            action = ranker.get_action(severity_score)
-            moderation_status = ModerationStatus[action.upper()]
 
-        # If blocked, do not create message
+        for span in offensive_spans:
+            offensive_word = span[3]
+            profanity_record = db.query(ProfanityWordTracking).filter(
+                ProfanityWordTracking.conversation_id == conversation.id,
+                ProfanityWordTracking.user_id == sender_id,
+                ProfanityWordTracking.word == offensive_word,
+                ProfanityWordTracking.muted_until > datetime.utcnow()
+            ).first()
+
+            if profanity_record:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"The word '{offensive_word}' is temporarily muted in this conversation."
+                )
+
+        # Set moderation status based on severity score
+        action = ranker.get_action(severity_score)
+        moderation_status = ModerationStatus[action.upper()]
+
+        # Case 1: Reject the message if the moderation status is blocked (based from the system design).
+        # Justification: The system should not allow messages that have high severity levels in the first place.
+        # Note: The other cases that are only "masked" / "flagged" are monitored and muted once it reaches a specific count of detection
+        # because the user just might say a profanity word out of frustrations or expression. However, it still need to have a limit
         if moderation_status == ModerationStatus.BLOCKED:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Message blocked due to policy violations"
+                detail="Message blocked due to policy violations."
             )
-        
+
+        # Case 2: Mute a specific profanity word after detecting it 5 times
+        masked_words = []
+        profanity_count = 0
+        for span in offensive_spans:
+            offensive_word = span[3]
+            if offensive_word not in masked_words:
+                masked_words.append(offensive_word)
+
+            profanity_record = db.query(ProfanityWordTracking).filter(
+                ProfanityWordTracking.conversation_id == conversation.id,
+                ProfanityWordTracking.user_id == sender_id,
+                ProfanityWordTracking.word == offensive_word
+            ).first()
+
+            if profanity_record:
+                profanity_record.count += 1
+                if profanity_record.count >= 5:
+                    profanity_record.muted_until = datetime.utcnow() + timedelta(hours=1)
+            else:
+                db.add(ProfanityWordTracking(
+                    conversation_id=conversation.id,
+                    user_id=sender_id,
+                    word=offensive_word,
+                    count=1
+                ))
+
+        if (masked_words):
+            profanity_count += 1
+
+        # Case 3: Check if the user has an existing muted word and a new profanity is detected
+        existing_mute = db.query(ProfanityWordTracking).filter(
+            ProfanityWordTracking.conversation_id == conversation.id,
+            ProfanityWordTracking.user_id == sender_id,
+            ProfanityWordTracking.muted_until > datetime.utcnow()
+        ).first()
+
+        if existing_mute and profanity_count > 0:
+            db.add(ConversationUserMute(
+                conversation_id=conversation.id,
+                user_id=sender_id,
+                muted_until=datetime.utcnow() + timedelta(hours=1),
+                profanity_count=0
+            ))
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are temporarily muted in this conversation due to repeated offensive language."
+            )
+
+        # Case 4: Mute a user in the conversation after sending high volume of profanities
+        if profanity_count > 0:
+            user_mute_record = db.query(ConversationUserMute).filter(
+                ConversationUserMute.conversation_id == conversation.id,
+                ConversationUserMute.user_id == sender_id
+            ).first()
+
+            if user_mute_record:
+                user_mute_record.profanity_count += profanity_count
+                if user_mute_record.profanity_count >= 7:
+                    user_mute_record.muted_until = datetime.utcnow() + timedelta(hours=1)
+                    db.commit()
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Error sending message: You are temporarily muted in this conversation due to sending a high volume of profanities."
+                    )
+            else:
+                db.add(ConversationUserMute(
+                    conversation_id=conversation.id,
+                    user_id=sender_id,
+                    profanity_count=profanity_count,
+                    muted_until=None
+                ))
+
         # Create message
         new_message = Message(
             conversation_id=conversation.id,
@@ -143,13 +287,13 @@ def send_message(
             content=content,
             moderation_status=moderation_status,
             severity_score=severity_score,
+            masked_words=masked_words,
             timestamp=datetime.utcnow()
         )
 
         db.add(new_message)
-        db.flush()  # Get the message ID
+        db.flush()
 
-        # Update conversation metadata
         conversation.last_message_id = new_message.id
         conversation.updated_at = datetime.utcnow()
 
@@ -192,7 +336,8 @@ def send_message(
                 "content": new_message.content,
                 "status": new_message.moderation_status.name,
                 "created_at": new_message.timestamp.isoformat(),
-                "receipts": receipt_reads
+                "receipts": receipt_reads,
+                "masked_words": masked_words
             }
         )
 
@@ -208,8 +353,9 @@ def send_message(
             id=new_message.id,
             conversation_id=new_message.conversation_id,
             sender_id=new_message.sender_id,
-            content=new_message.content,
+            content=new_message.content,  
             moderation_status=new_message.moderation_status,
+            masked_words=masked_words,
             created_at=new_message.timestamp,
             receipts=receipt_reads
         )

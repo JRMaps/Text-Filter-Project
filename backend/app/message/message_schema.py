@@ -43,6 +43,7 @@ class MessageRead(MessageBase):
     moderation_status: ModerationStatus
     created_at: datetime
     receipts: Optional[List[MessageReceiptRead]] = None
+    masked_words: Optional[List[str]] = None
 
     class Config:
         from_attributes = True

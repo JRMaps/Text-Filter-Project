@@ -59,6 +59,7 @@ class ConversationWithMessages(ConversationRead):
 class LastMessage(BaseModel):
     content: Optional[str]
     moderation_status: Optional[ModerationStatus]
+    masked_words: Optional[List[str]]
 
     model_config = {
         "from_attributes": True
