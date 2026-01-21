@@ -43,6 +43,7 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
 
             last_message_content = last_message.content if last_message else None
             last_message_moderation_status = last_message.moderation_status if last_message else None
+            last_message_masked_words = last_message.masked_words if last_message else None  # Include masked words
 
             convo_type = convo.type.value.lower()
 
@@ -61,7 +62,8 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
                         updated_at=convo.updated_at,
                         last_message={
                             "content": last_message_content,
-                            "moderation_status": last_message_moderation_status
+                            "moderation_status": last_message_moderation_status,
+                            "masked_words": last_message_masked_words  # Add masked words here
                         },
                         other_user=ConversationParticipantRead(
                             id=other_user.id,
@@ -77,7 +79,8 @@ def get_all_conversations(current_user_id: int, db: Session) -> List[Conversatio
                         updated_at=convo.updated_at,
                         last_message={
                             "content": last_message_content,
-                            "moderation_status": last_message_moderation_status
+                            "moderation_status": last_message_moderation_status,
+                            "masked_words": last_message_masked_words  # Add masked words here
                         },
                         group_name=convo.group_name,
                         member_count=len(convo.participants),
