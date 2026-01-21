@@ -111,6 +111,12 @@ def send_message(
             detail="Provide only one of conversation_id or receiver_id"
         )
 
+    if receiver_id and sender_id == receiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot send a message to yourself."
+        )
+
     try:
         sender = db.query(User).filter(User.id == sender_id).first()
         if not sender:
@@ -156,7 +162,6 @@ def send_message(
             else:
                 conversation = create_new_conversation(db, sender_id, receiver_id)
 
-
         reset_expired_mutes(db, conversation.id, sender_id)
 
         user_mute = db.query(ConversationUserMute).filter(
@@ -176,7 +181,6 @@ def send_message(
         ranker = Ranker(tokens, muted_words=conversation.muted_words)
         severity_score = ranker.calculate_severity()
         offensive_spans = ranker.offensive_spans
-
 
         for span in offensive_spans:
             offensive_word = span[3]
@@ -224,7 +228,7 @@ def send_message(
             if profanity_record:
                 profanity_record.count += 1
                 if profanity_record.count >= 5:
-                    profanity_record.muted_until = datetime.utcnow() + timedelta(hours=1)
+                    profanity_record.muted_until = datetime.utcnow() + timedelta(minutes=5)
             else:
                 db.add(ProfanityWordTracking(
                     conversation_id=conversation.id,
@@ -247,7 +251,7 @@ def send_message(
             db.add(ConversationUserMute(
                 conversation_id=conversation.id,
                 user_id=sender_id,
-                muted_until=datetime.utcnow() + timedelta(hours=1),
+                muted_until=datetime.utcnow() + timedelta(minutes=5),
                 profanity_count=0
             ))
             db.commit()
@@ -266,7 +270,7 @@ def send_message(
             if user_mute_record:
                 user_mute_record.profanity_count += profanity_count
                 if user_mute_record.profanity_count >= 7:
-                    user_mute_record.muted_until = datetime.utcnow() + timedelta(hours=1)
+                    user_mute_record.muted_until = datetime.utcnow() + timedelta(minutes=5)
                     db.commit()
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
