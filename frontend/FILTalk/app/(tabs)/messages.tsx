@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter, Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -8,8 +9,21 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
+  TextInput,
+  ScrollView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Fonts } from "@/constants/theme";
+
+// Sample online contacts data
+const onlineContacts = [
+  { id: "1", name: "Juan Dela Cruz" },
+  { id: "2", name: "Pedro Garcia" },
+  { id: "3", name: "Carlos Mendoza" },
+  { id: "4", name: "Sia Antoriano" },
+  { id: "5", name: "Celebes Dimautang" },
+];
 
 // Sample messages data - will be replaced with backend data
 const sampleMessages = [
@@ -22,27 +36,42 @@ const sampleMessages = [
   },
   {
     id: "2",
+    name: "Sia Antoriano",
+    lastMessage: "Masaya naman dito!",
+    time: "2:25 PM",
+    unread: 3,
+  },
+  {
+    id: "3",
+    name: "Celebes Dimautang",
+    lastMessage: "Ganun naman talaga..",
+    time: "10:30 AM",
+    unread: 1,
+  },
+
+  {
+    id: "4",
     name: "Maria Santos",
     lastMessage: "Sige, see you tomorrow!",
     time: "1:15 PM",
     unread: 0,
   },
   {
-    id: "3",
+    id: "5",
     name: "Pedro Garcia",
     lastMessage: "Okay lang, salamat!",
     time: "11:45 AM",
     unread: 5,
   },
   {
-    id: "4",
+    id: "6",
     name: "Ana Reyes",
     lastMessage: "Nagtext ka ba kanina?",
     time: "Yesterday",
     unread: 0,
   },
   {
-    id: "5",
+    id: "7",
     name: "Carlos Mendoza",
     lastMessage: "Ingat palagi!",
     time: "Yesterday",
@@ -51,8 +80,21 @@ const sampleMessages = [
 ];
 
 const MessagesScreen = () => {
+  const router = useRouter();
+
+  const handleMessagePress = (item: (typeof sampleMessages)[0]) => {
+    router.push({
+      pathname: "/chat",
+      params: { name: item.name, id: item.id },
+    } as Href);
+  };
+
   const renderMessage = ({ item }: { item: (typeof sampleMessages)[0] }) => (
-    <TouchableOpacity style={styles.messageItem} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.messageItem}
+      activeOpacity={0.7}
+      onPress={() => handleMessagePress(item)}
+    >
       <View style={styles.avatar}>
         <Image
           source={require("@/assets/images/account.png")}
@@ -85,29 +127,85 @@ const MessagesScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.composeButton}>
+        {/* Header */}
+        <View style={styles.header}>
           <Image
-            source={require("@/assets/images/messages.png")}
-            style={styles.composeIcon}
+            source={require("@/assets/images/FILTalktext.png")}
+            style={styles.headerLogo}
           />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.composeButton}>
+            <Image
+              source={require("@/assets/images/MessagesNewChatIcon.png")}
+              style={styles.composeIcon}
+            />
+          </TouchableOpacity>
+        </View>
 
-      {/* Messages List */}
-      <FlatList
-        data={sampleMessages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
-    </SafeAreaView>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Image
+              source={require("@/assets/images/Search.png")}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search Conversation or People"
+              placeholderTextColor="#999"
+            />
+          </View>
+        </View>
+
+        {/* Online Contacts */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.onlineContactsContainer}
+          contentContainerStyle={styles.onlineContactsContent}
+        >
+          {onlineContacts.map((contact) => (
+            <TouchableOpacity
+              key={contact.id}
+              style={styles.onlineContact}
+              // ADDED THIS ONPRESS:
+              onPress={() =>
+                router.push({
+                  pathname: "/chat",
+                  params: { name: contact.name, id: contact.id },
+                } as Href)
+              }
+            >
+              <View style={styles.onlineAvatarContainer}>
+                <View style={styles.onlineAvatar}>
+                  <Image
+                    source={require("@/assets/images/account.png")}
+                    style={styles.onlineAvatarImage}
+                  />
+                </View>
+                <View style={styles.onlineIndicator} />
+              </View>
+              <Text style={styles.onlineContactName} numberOfLines={2}>
+                {contact.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Messages List */}
+        <FlatList
+          data={sampleMessages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -122,26 +220,95 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 15,
+    paddingBottom: 10,
+    marginLeft: 10,
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#f6ca15",
+  headerLogo: {
+    width: 130,
+    height: 44,
+    resizeMode: "contain",
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#666",
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 22,
+    color: "#333",
+    fontFamily: Fonts.regular,
+  },
+  onlineContactsContainer: {
+    maxHeight: 130,
+    marginBottom: 10,
+  },
+  onlineContactsContent: {
+    paddingHorizontal: 20,
+    gap: 15,
+    paddingBottom: 40,
+  },
+  onlineContact: {
+    alignItems: "center",
+    width: 70,
+  },
+  onlineAvatarContainer: {
+    position: "relative",
+    marginBottom: 10,
+  },
+  onlineAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  onlineAvatarImage: {
+    width: 30,
+    height: 40,
+    tintColor: "#fff",
+  },
+  onlineIndicator: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#4CD964",
+    borderWidth: 2,
+    borderColor: "#F5F5F5",
+  },
+  onlineContactName: {
+    fontSize: 12,
+    color: "#333",
+    textAlign: "center",
     fontFamily: Fonts.regular,
   },
   composeButton: {
-    backgroundColor: "#f6ca15",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },
   composeIcon: {
-    width: 22,
-    height: 22,
-    tintColor: "#000",
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -165,8 +332,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarImage: {
-    width: 32,
-    height: 32,
+    width: 26,
+    height: 34,
     tintColor: "#666",
   },
   messageInfo: {
@@ -179,13 +346,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageName: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: "600",
     color: "#000",
     fontFamily: Fonts.regular,
   },
   messageTime: {
-    fontSize: 12,
+    fontSize: 18,
     color: "#999",
     fontFamily: Fonts.regular,
   },
@@ -195,7 +362,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#666",
     flex: 1,
     marginRight: 10,

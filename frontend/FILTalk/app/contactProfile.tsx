@@ -76,10 +76,10 @@ const ContactProfileScreen = () => {
                 style={styles.avatarImage}
               />
             ) : (
-              <View style={styles.avatarIcon}>
-                <View style={styles.avatarHead} />
-                <View style={styles.avatarBody} />
-              </View>
+              <Image
+                source={require("@/assets/images/account.png")}
+                style={styles.defaultAvatarIcon}
+              />
             )}
           </View>
           <View style={styles.profileInfo}>
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     resizeMode: "contain",
   },
   editButton: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   editButtonText: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: "900",
     color: "#0039a9",
     fontFamily: Fonts.regular,
@@ -196,8 +196,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 15,
     overflow: "hidden",
+    marginTop: -10,
     marginBottom: 40,
   },
   avatarImage: {
@@ -205,39 +205,30 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
-  avatarIcon: {
-    width: 200,
-    height: 200,
+  defaultAvatarIcon: {
+    width: 125,
+    height: 125,
     justifyContent: "center",
     alignItems: "center",
-  },
-  avatarHead: {
-    width: 76,
-    height: 76,
-    borderRadius: 56,
-    backgroundColor: "#FFF",
-    marginBottom: 2,
-  },
-  avatarBody: {
-    width: 58,
-    height: 52,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: "#FFF",
+    resizeMode: "contain",
+    tintColor: "#FFF",
   },
   profileInfo: {
     alignItems: "center",
   },
   profileName: {
-    fontSize: 36,
+    fontSize: 52,
     fontWeight: "900",
     color: "#000",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 10,
+    marginTop: -20,
     fontFamily: Fonts.regular,
   },
   statusText: {
-    fontSize: 14,
+    fontSize: 20,
+    marginTop: -4,
+    marginBottom: 10,
     color: "#666",
     fontFamily: Fonts.regular,
   },
@@ -256,8 +247,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionIconContainer: {
-    width: 62,
-    height: 62,
+    width: 64,
+    height: 64,
     borderRadius: 8,
     backgroundColor: "#E8E8E8",
     justifyContent: "center",
@@ -270,15 +261,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionIcon: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     resizeMode: "contain",
   },
   actionLabel: {
-    fontSize: 12,
+    fontSize: 15,
     color: "#000",
     fontWeight: "800",
     fontFamily: Fonts.regular,
+    marginTop: 8,
   },
   detailsCard: {
     backgroundColor: "#FFF",
@@ -301,14 +293,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: "600",
     color: "#000",
     marginBottom: 4,
     fontFamily: Fonts.regular,
   },
   detailValue: {
-    fontSize: 15,
+    fontSize: 18,
     color: "#666",
     fontFamily: Fonts.regular,
   },

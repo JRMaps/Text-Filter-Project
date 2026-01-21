@@ -1,98 +1,131 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { Image, StyleSheet } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Fonts } from "@/constants/theme";
 
-// FILTalk brand colors
-const FILTalkColors = {
-  primary: "#f6ca15", // Yellow accent
+const TabColors = {
+  contacts: "#cd1127", // Red
+  messages: "#0039a9", // Blue
+  account: "#f6ca15", // Yellow
   inactive: "#666",
-  background: "#F5F5F5",
 };
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: FILTalkColors.primary,
-        tabBarInactiveTintColor: FILTalkColors.inactive,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopWidth: 0,
-          elevation: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          height: 65,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-          fontFamily: Fonts.regular,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="contacts"
-        options={{
-          title: "Contacts",
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require("@/assets/images/contacts.png")}
-              style={[styles.tabIcon, { tintColor: color }]}
-            />
-          ),
+    <View style={styles.container}>
+      <Tabs
+        screenOptions={{
+          tabBarInactiveTintColor: TabColors.inactive,
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: {
+            backgroundColor: "#fff",
+            elevation: 8,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            height: 70,
+            paddingBottom: 20,
+            paddingTop: 10,
+            marginHorizontal: 90,
+            marginBottom: 35,
+            borderRadius: 40,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            justifyContent: "center",
+            alignItems: "center",
+            borderTopWidth: 0,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            marginTop: 4,
+            fontWeight: "500",
+            fontFamily: Fonts.regular,
+          },
+          tabBarItemStyle: {
+            justifyContent: "center",
+            alignItems: "center",
+          },
         }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: "Messages",
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require("@/assets/images/messages.png")}
-              style={[styles.tabIcon, { tintColor: color }]}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: "Account",
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require("@/assets/images/account.png")}
-              style={[styles.tabIcon, { tintColor: color }]}
-            />
-          ),
-        }}
-      />
-      {/* Hide the splash screen from tab bar */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="contacts"
+          options={{
+            title: "Contacts",
+            tabBarActiveTintColor: TabColors.contacts,
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={
+                  focused
+                    ? require("@/assets/images/contactsred.png")
+                    : require("@/assets/images/contacts.png")
+                }
+                style={styles.tabIcon}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="messages"
+          options={{
+            title: "Messages",
+            tabBarActiveTintColor: TabColors.messages,
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={
+                  focused
+                    ? require("@/assets/images/messagesblue.png")
+                    : require("@/assets/images/messages.png")
+                }
+                style={styles.tabIcon}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: "Account",
+            tabBarActiveTintColor: TabColors.account,
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={
+                  focused
+                    ? require("@/assets/images/accountyellow.png")
+                    : require("@/assets/images/account.png")
+                }
+                style={styles.tabIcon}
+              />
+            ),
+          }}
+        />
+        {/* Hide the splash screen from tab bar */}
+        <Tabs.Screen
+          name="index"
+          options={{
+            href: null,
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+  },
   tabIcon: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
     resizeMode: "contain",
   },
 });

@@ -33,7 +33,7 @@ const EditProfileScreen = () => {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permission Required",
-        "Permission to access camera roll is required!"
+        "Permission to access camera roll is required!",
       );
       return;
     }
@@ -62,7 +62,7 @@ const EditProfileScreen = () => {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permission Required",
-        "Permission to access camera is required!"
+        "Permission to access camera is required!",
       );
       return;
     }
@@ -99,7 +99,7 @@ const EditProfileScreen = () => {
     Alert.alert(
       "Profile Updated",
       "Your profile has been updated successfully!",
-      [{ text: "OK", onPress: () => router.back() }]
+      [{ text: "OK", onPress: () => router.back() }],
     );
   };
 
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 30,
+    paddingTop: 15,
     paddingBottom: 16,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#000",
     flex: 1,
@@ -220,12 +220,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   cancelButton: {
-    fontSize: 16,
+    fontSize: 22,
     color: "#666",
     fontFamily: Fonts.regular,
   },
   saveButton: {
-    fontSize: 16,
+    fontSize: 22,
     color: "#f6ca15",
     fontWeight: "600",
     fontFamily: Fonts.regular,
@@ -235,9 +235,9 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: "#E8E8E8",
     justifyContent: "center",
     alignItems: "center",
@@ -247,17 +247,17 @@ const styles = StyleSheet.create({
     borderColor: "#f6ca15",
   },
   profileImageStyle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
   },
   defaultProfileImage: {
-    width: 60,
-    height: 60,
+    width: 68,
+    height: 96,
     tintColor: "#999",
   },
   changePhotoText: {
-    fontSize: 16,
+    fontSize: 22,
     color: "#f6ca15",
     fontWeight: "600",
     fontFamily: Fonts.regular,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 26,
     fontWeight: "600",
     color: "#000",
     marginBottom: 8,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 20,
     borderWidth: 1,
     borderColor: "#E8E8E8",
     color: "#000",

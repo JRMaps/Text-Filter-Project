@@ -1,10 +1,10 @@
 import { useRouter, Href } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -15,10 +15,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/theme";
+import { authApi } from "@/services/api";
 
 const LoginScreen = () => {
   const [emailOrNumber, setEmailOrNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -30,20 +32,33 @@ const LoginScreen = () => {
       return;
     }
 
-    // Implement actual authentication with backend
-    Alert.alert("Success", "Login Successful", [
-      { text: "OK", onPress: () => router.replace("/(tabs)/messages" as Href) },
-    ]);
+    setIsLoading(true);
+    try {
+      // TODO: Re-enable backend API call when ready
+      // Determine if input is email or phone number
+      // const isEmail = emailOrNumber.includes("@");
+      // const loginData = isEmail
+      //   ? { email: emailOrNumber, password }
+      //   : { phone_number: emailOrNumber, password };
+      // await authApi.login(loginData);
+
+      // Temporary: Skip API call for UI testing
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Fake delay
+
+      // Navigate immediately after successful login
+      router.replace("/(tabs)/messages" as Href);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Login failed";
+      Alert.alert("Error", message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.scrollContent}>
           <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
           {/* Header Section */}
@@ -77,12 +92,11 @@ const LoginScreen = () => {
               placeholderTextColor="#9E9E9E"
               secureTextEntry
             />
-            <Text
-              style={styles.forgotPass}
-              onPress={() => console.log("Forgot password pressed")}
+            <TouchableOpacity
+              onPress={() => router.push("../passwordRecovery")}
             >
-              Forgot Password?
-            </Text>
+              <Text style={styles.forgotPass}>Forgot Password?</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Buttons Section */}
@@ -90,8 +104,13 @@ const LoginScreen = () => {
             <TouchableOpacity
               style={[styles.buttonBase, styles.loginButton]}
               onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.buttonText}>Login</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Login</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.buttonBase, styles.cancelButton]}
@@ -106,7 +125,7 @@ const LoginScreen = () => {
               Create Account
             </Text>
           </View>
-        </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
   );

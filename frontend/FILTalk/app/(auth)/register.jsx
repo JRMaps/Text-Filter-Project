@@ -17,19 +17,31 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const RegisterScreen = () => {
-  const [name, setName] = useState("");
+  const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (!name || !email || !phone || !password || !confirmPassword) {
+    if (
+      !fullname ||
+      !email ||
+      !phone ||
+      !username ||
+      !password ||
+      !confirmPassword
+    ) {
       Alert.alert("Error", "All fields are required");
       return;
     }
 
+    if (fullname.length < 12) {
+      Alert.alert("Error", "Please enter a valid full name");
+      return;
+    }
     if (!email.includes("@")) {
       Alert.alert("Error", "Please enter a valid email address");
       return;
@@ -82,8 +94,8 @@ const RegisterScreen = () => {
             <Text style={styles.labelText}>Full Name</Text>
             <TextInput
               style={styles.inputField}
-              value={name}
-              onChangeText={setName}
+              value={fullname}
+              onChangeText={setFullname}
               placeholder="Enter your full name"
               placeholderTextColor="#9E9E9E"
             />
@@ -107,6 +119,16 @@ const RegisterScreen = () => {
               placeholder="Enter your phone number"
               placeholderTextColor="#9E9E9E"
               keyboardType="phone-pad"
+            />
+
+            <Text style={styles.labelText}>Username</Text>
+            <TextInput
+              style={styles.inputField}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Enter your username"
+              placeholderTextColor="#9E9E9E"
+              autoCapitalize="none"
             />
 
             <Text style={styles.labelText}>Password</Text>

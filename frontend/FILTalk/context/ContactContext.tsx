@@ -71,17 +71,35 @@ export const ContactProvider = ({ children }: { children: ReactNode }) => {
       status: "Online",
       lastSeen: "Active now",
     },
+    {
+      id: "6",
+      name: "Sia Antoriano",
+      email: "sia@gmail.com",
+      phone: "09678901234",
+      avatar: null,
+      status: "Online",
+      lastSeen: "Active now",
+    },
+    {
+      id: "7",
+      name: "Celebes Dimautang",
+      email: "celebes@gmail.com",
+      phone: "09789012345",
+      avatar: null,
+      status: "Online",
+      lastSeen: "Active now",
+    },
   ]);
 
   const [selectedContact, setSelectedContact] = useState<ContactData | null>(
-    null
+    null,
   );
 
   const updateContact = (updatedContact: ContactData) => {
     setContacts((prev) =>
       prev.map((contact) =>
-        contact.id === updatedContact.id ? updatedContact : contact
-      )
+        contact.id === updatedContact.id ? updatedContact : contact,
+      ),
     );
     if (selectedContact?.id === updatedContact.id) {
       setSelectedContact(updatedContact);
