@@ -1,155 +1,94 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { router } from "expo-router";
 
-// Change this to your backend URL
-// For Android emulator: http://10.0.2.2:8000
-// For iOS simulator: http://localhost:8000
-// For physical device: use your computer's local IP (e.g., http://192.168.1.x:8000)
-const API_BASE_URL = 'http://10.0.2.2:8000/api';
+// ============ CONFIGURATION ============
 
-// Token storage keys
-const TOKEN_KEY = 'auth_token';
+const resolveApiOrigin = (): string => {
+  const myComputerIp = "192.168.254.201";
+  const hostUri = Constants.expoConfig?.hostUri || Constants.hostUri;
+  if (typeof hostUri === "string" && hostUri.length > 0) {
+    const host = hostUri.split(":")[0];
+    return `http://${host}:8000`;
+  }
+  return Platform.OS === "android" || Platform.OS === "ios"
+    ? `http://${myComputerIp}:8000`
+    : "http://localhost:8000";
+};
 
-// Helper to get stored token
+const API_BASE_URL = `${resolveApiOrigin()}/api`;
+const TOKEN_KEY = "auth_token";
+
+// ============ HELPERS ============
+
 export const getToken = async (): Promise<string | null> => {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    return token ? token.replace(/["\n\r]/g, "").trim() : null;
   } catch {
     return null;
   }
 };
 
-// Helper to store token
 export const setToken = async (token: string): Promise<void> => {
   await AsyncStorage.setItem(TOKEN_KEY, token);
 };
 
-// Helper to remove token (logout)
 export const removeToken = async (): Promise<void> => {
   await AsyncStorage.removeItem(TOKEN_KEY);
 };
 
-// Generic fetch wrapper with auth
+const forceLogout = async () => {
+  console.warn("[AUTH] Session expired (401). Logging out...");
+  await removeToken();
+  router.replace("/login");
+};
+
 const fetchWithAuth = async (
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> => {
-  const token = await getToken();
-  
+  const publicRoutes = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/forgot-password-otp",
+    "/auth/verify-otp",
+    "/auth/reset-password-otp",
+  ];
+
+  const isPublicRoute = publicRoutes.some((route) =>
+    endpoint.startsWith(route),
+  );
+
+  let token = null;
+  if (!isPublicRoute) {
+    token = await getToken();
+  }
+
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   };
 
   if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
-  return fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401 && !isPublicRoute) {
+    await forceLogout();
+    return new Response(JSON.stringify({ detail: "Session expired" }), {
+      status: 401,
+    });
+  }
+
+  return response;
 };
 
-// ============ AUTH API ============
-
-export interface RegisterData {
-  fullname: string;
-  username: string;
-  email?: string;
-  phone_number?: string;
-  password: string;
-}
-
-export interface LoginData {
-  email?: string;
-  phone_number?: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-}
-
-export const authApi = {
-  register: async (data: RegisterData) => {
-    const response = await fetchWithAuth('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Registration failed');
-    }
-    
-    return response.json();
-  },
-
-  login: async (data: LoginData): Promise<AuthResponse> => {
-    const response = await fetchWithAuth('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
-    }
-    
-    const result: AuthResponse = await response.json();
-    // Token storage is handled by AuthContext.login()
-    return result;
-  },
-
-  logout: async () => {
-    await removeToken();
-  },
-
-  requestPasswordReset: async (email?: string, phone_number?: string) => {
-    const response = await fetchWithAuth('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone_number }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to send OTP');
-    }
-    
-    return response.json();
-  },
-
-  verifyOTP: async (email: string | undefined, phone_number: string | undefined, otp: string) => {
-    const response = await fetchWithAuth('/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone_number, otp }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'OTP verification failed');
-    }
-    
-    return response.json();
-  },
-
-  resetPassword: async (email: string | undefined, phone_number: string | undefined, otp: string, new_password: string) => {
-    const response = await fetchWithAuth('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone_number, otp, new_password }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Password reset failed');
-    }
-    
-    return response.json();
-  },
-};
-
-// ============ USER API ============
+// ============ INTERFACES ============
 
 export interface User {
   id: number;
@@ -159,228 +98,166 @@ export interface User {
   active_status?: boolean;
 }
 
-export const userApi = {
-  getCurrentUser: async (): Promise<User> => {
-    const response = await fetchWithAuth('/users/me');
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get user');
-    }
-    
-    return response.json();
-  },
-
-  updateUser: async (data: Partial<User>) => {
-    const response = await fetchWithAuth('/users/me', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to update user');
-    }
-    
-    return response.json();
-  },
-
-  searchUsers: async (query: string): Promise<User[]> => {
-    const response = await fetchWithAuth(`/users/search?query=${encodeURIComponent(query)}`);
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Search failed');
-    }
-    
-    return response.json();
-  },
-};
-
-// ============ CONTACTS API ============
-
 export interface Contact {
   id: number;
-  user_id: number;
   contact_id: number;
-  status: 'PENDING' | 'ACCEPTED' | 'BLOCKED';
-  contact_user?: User;
+  status: "pending" | "accepted" | "blocked";
+  contact: User;
 }
 
-export const contactsApi = {
-  getContacts: async (): Promise<Contact[]> => {
-    const response = await fetchWithAuth('/contacts');
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get contacts');
-    }
-    
-    return response.json();
-  },
-
-  addContact: async (contactId: number) => {
-    const response = await fetchWithAuth('/contacts/add', {
-      method: 'POST',
-      body: JSON.stringify({ contact_id: contactId }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to add contact');
-    }
-    
-    return response.json();
-  },
-
-  acceptContact: async (contactId: number) => {
-    const response = await fetchWithAuth(`/contacts/${contactId}/accept`, {
-      method: 'PUT',
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to accept contact');
-    }
-    
-    return response.json();
-  },
-
-  blockContact: async (contactId: number) => {
-    const response = await fetchWithAuth(`/contacts/${contactId}/block`, {
-      method: 'PUT',
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to block contact');
-    }
-    
-    return response.json();
-  },
-
-  removeContact: async (contactId: number) => {
-    const response = await fetchWithAuth(`/contacts/${contactId}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to remove contact');
-    }
-    
-    return response.json();
-  },
-};
-
-// ============ CONVERSATIONS API ============
-
+// Added Message Interface
 export interface Message {
   id: number;
   conversation_id: number;
   sender_id: number;
   content: string;
-  moderation_status: 'ALLOWED' | 'MASKED' | 'BLOCKED' | 'FLAGGED';
-  severity_score?: number;
-  timestamp: string;
+  moderation_status: string;
+  created_at: string;
+  masked_words?: string[];
 }
 
 export interface Conversation {
   id: number;
-  type: 'PRIVATE' | 'GROUP';
+  type: "private" | "group";
   group_name?: string;
-  participants: User[];
-  last_message?: Message;
   updated_at: string;
+  participants: User[];
+  last_message?: {
+    content: string;
+    moderation_status: string;
+    created_at: string;
+    masked_words?: string[];
+  };
+  // Added optional messages array for full conversation history
+  messages?: Message[];
 }
 
-export const conversationsApi = {
-  getConversations: async (): Promise<Conversation[]> => {
-    const response = await fetchWithAuth('/conversations');
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get conversations');
-    }
-    
-    return response.json();
-  },
+// ============ API MODULES ============
 
-  getConversation: async (conversationId: number): Promise<Conversation> => {
-    const response = await fetchWithAuth(`/conversations/${conversationId}`);
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get conversation');
-    }
-    
-    return response.json();
-  },
-
-  getMessages: async (conversationId: number): Promise<Message[]> => {
-    const response = await fetchWithAuth(`/conversations/${conversationId}/messages`);
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to get messages');
-    }
-    
-    return response.json();
-  },
-
-  createPrivateConversation: async (participantId: number) => {
-    const response = await fetchWithAuth('/conversations/private', {
-      method: 'POST',
-      body: JSON.stringify({ participant_id: participantId }),
+export const authApi = {
+  register: async (data: any) => {
+    const response = await fetchWithAuth("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to create conversation');
-    }
-    
+    if (!response.ok)
+      throw new Error((await response.json()).detail || "Registration failed");
     return response.json();
   },
-
-  createGroupConversation: async (name: string, participantIds: number[]) => {
-    const response = await fetchWithAuth('/conversations/group', {
-      method: 'POST',
-      body: JSON.stringify({ group_name: name, participant_ids: participantIds }),
+  login: async (data: any) => {
+    const response = await fetchWithAuth("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to create group');
-    }
-    
+    if (!response.ok)
+      throw new Error((await response.json()).detail || "Login failed");
+    const result = await response.json();
+    if (result.access_token) await setToken(result.access_token);
+    return result;
+  },
+  logout: async () => {
+    await removeToken();
+  },
+};
+
+export const userApi = {
+  getById: async (id: number): Promise<User> => {
+    const response = await fetchWithAuth(`/users/${id}`);
+    if (!response.ok) throw new Error(`User load failed: ${response.status}`);
+    return response.json();
+  },
+  getCurrentUser: async (): Promise<User> => {
+    const response = await fetchWithAuth("/users/profile");
+    return response.json();
+  },
+  searchUsers: async (username: string): Promise<User[]> => {
+    const response = await fetchWithAuth(
+      `/users/search?username=${encodeURIComponent(username)}`,
+    );
     return response.json();
   },
 };
 
-// ============ MESSAGES API ============
+export const contactsApi = {
+  getAll: (status?: string) => contactsApi.getContacts(status),
+
+  getContacts: async (status?: string): Promise<Contact[]> => {
+    const url = status
+      ? `/contacts/contact-list?status=${status}`
+      : "/contacts/contact-list";
+    const response = await fetchWithAuth(url);
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  },
+  addContact: async (contactId: number) => {
+    const response = await fetchWithAuth("/contacts/send_request", {
+      method: "POST",
+      body: JSON.stringify({ contact_id: contactId }),
+    });
+    return response.json();
+  },
+};
+
+export const conversationsApi = {
+  getAll: () => conversationsApi.getConversations(),
+
+  getConversations: async (): Promise<Conversation[]> => {
+    try {
+      const response = await fetchWithAuth("/conversations");
+      if (!response.ok) return [];
+      return response.json();
+    } catch (err) {
+      console.error("[API] Network Error in getConversations", err);
+      return [];
+    }
+  },
+
+  getConversation: async (id: number): Promise<Conversation> => {
+    const response = await fetchWithAuth(`/conversations/${id}`);
+    if (!response.ok) throw new Error("Failed to fetch history");
+    return response.json();
+  },
+
+  createPrivateConversation: async (
+    receiverId: number,
+  ): Promise<Conversation> => {
+    const response = await fetchWithAuth("/conversations/private", {
+      method: "POST",
+      body: JSON.stringify({ receiver_id: receiverId }),
+    });
+    if (!response.ok) throw new Error("Could not start conversation");
+    return response.json();
+  },
+};
 
 export const messagesApi = {
-  sendMessage: async (conversationId: number, content: string): Promise<Message> => {
-    const response = await fetchWithAuth('/messages/send_message', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        conversation_id: conversationId, 
-        content 
+  sendMessage: async (
+    content: string,
+    conversationId?: number,
+    receiverId?: number,
+  ) => {
+    const response = await fetchWithAuth("/messages/send_message", {
+      method: "POST",
+      body: JSON.stringify({
+        content,
+        conversation_id: conversationId,
+        receiver_id: receiverId,
       }),
     });
-    
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to send message');
+      throw new Error(error.detail || "Failed to send message");
     }
-    
-    return response.json();
+    return response.json(); // Returns a Message object
   },
 };
 
 export default {
   auth: authApi,
   user: userApi,
+  users: userApi,
   contacts: contactsApi,
   conversations: conversationsApi,
   messages: messagesApi,

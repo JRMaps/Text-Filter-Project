@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -10,17 +10,40 @@ import {
   ScrollView,
   Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Fonts } from "@/constants/theme";
+import api from "../../services/api";
 
 const AccountScreen = () => {
   const router = useRouter();
 
-  // User profile state - will be populated by backend API
-  const [userProfile] = useState({
-    name: "Ivan Dela Cruz",
-    email: "ivan.delacruz@gmail.com",
-    phone: "09231734621",
+  // User profile state populated by backend API
+  const [userProfile, setUserProfile] = useState({
+    name: "Loading...",
+    email: "...",
+    phone: "...",
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const id = await AsyncStorage.getItem("user_id");
+        if (id) {
+          // Fetch using the specific method for querying by ID
+          const userData = await api.users.getById(id);
+
+          setUserProfile({
+            name: userData.username || "User",
+            email: userData.email || "",
+            phone: userData.phone_number || "No Phone Number",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load profile", error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const settingsMenuItems = [
     {
@@ -49,8 +72,10 @@ const AccountScreen = () => {
     },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Clear auth state and navigate to login
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user_id");
     router.replace("/(auth)" as Href);
   };
 

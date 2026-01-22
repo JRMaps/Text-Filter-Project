@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/theme";
-import { authApi } from "@/services/api";
+import { authApi, setToken } from "@/services/api";
+import { connectSocket } from "@/services/socket";
 
 const LoginScreen = () => {
   const [emailOrNumber, setEmailOrNumber] = useState("");
@@ -34,18 +35,21 @@ const LoginScreen = () => {
 
     setIsLoading(true);
     try {
-      // TODO: Re-enable backend API call when ready
-      // Determine if input is email or phone number
-      // const isEmail = emailOrNumber.includes("@");
-      // const loginData = isEmail
-      //   ? { email: emailOrNumber, password }
-      //   : { phone_number: emailOrNumber, password };
-      // await authApi.login(loginData);
+      const isEmail = emailOrNumber.includes("@");
+      const loginData = isEmail
+        ? { email: emailOrNumber, password }
+        : { phone_number: emailOrNumber, password };
 
-      // Temporary: Skip API call for UI testing
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Fake delay
+      const result = await authApi.login(loginData);
+      const token = result?.access_token || result?.token;
+      if (!token) throw new Error("No access token returned");
 
-      // Navigate immediately after successful login
+      await setToken(token);
+
+      // Connect WebSocket after storing token
+      connectSocket(token);
+
+      // Navigate to main messages
       router.replace("/(tabs)/messages" as Href);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed";

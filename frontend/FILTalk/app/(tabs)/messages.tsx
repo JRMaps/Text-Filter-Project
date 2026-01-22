@@ -1,393 +1,259 @@
-import React from "react";
-import { useRouter, Href } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  View,
-  Text,
-  StyleSheet,
-  StatusBar,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  ScrollView,
-  Keyboard,
-  TouchableWithoutFeedback,
-} from "react-native";
-import { Fonts } from "@/constants/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { router } from "expo-router"; // Import router to force navigation
 
-// Sample online contacts data
-const onlineContacts = [
-  { id: "1", name: "Juan Dela Cruz" },
-  { id: "2", name: "Pedro Garcia" },
-  { id: "3", name: "Carlos Mendoza" },
-  { id: "4", name: "Sia Antoriano" },
-  { id: "5", name: "Celebes Dimautang" },
-];
+// ============ CONFIGURATION ============
 
-// Sample messages data - will be replaced with backend data
-const sampleMessages = [
-  {
-    id: "1",
-    name: "Juan Dela Cruz",
-    lastMessage: "Kamusta ka na?",
-    time: "2:30 PM",
-    unread: 2,
-  },
-  {
-    id: "2",
-    name: "Sia Antoriano",
-    lastMessage: "Masaya naman dito!",
-    time: "2:25 PM",
-    unread: 3,
-  },
-  {
-    id: "3",
-    name: "Celebes Dimautang",
-    lastMessage: "Ganun naman talaga..",
-    time: "10:30 AM",
-    unread: 1,
-  },
-
-  {
-    id: "4",
-    name: "Maria Santos",
-    lastMessage: "Sige, see you tomorrow!",
-    time: "1:15 PM",
-    unread: 0,
-  },
-  {
-    id: "5",
-    name: "Pedro Garcia",
-    lastMessage: "Okay lang, salamat!",
-    time: "11:45 AM",
-    unread: 5,
-  },
-  {
-    id: "6",
-    name: "Ana Reyes",
-    lastMessage: "Nagtext ka ba kanina?",
-    time: "Yesterday",
-    unread: 0,
-  },
-  {
-    id: "7",
-    name: "Carlos Mendoza",
-    lastMessage: "Ingat palagi!",
-    time: "Yesterday",
-    unread: 1,
-  },
-];
-
-const MessagesScreen = () => {
-  const router = useRouter();
-
-  const handleMessagePress = (item: (typeof sampleMessages)[0]) => {
-    router.push({
-      pathname: "/chat",
-      params: { name: item.name, id: item.id },
-    } as Href);
-  };
-
-  const renderMessage = ({ item }: { item: (typeof sampleMessages)[0] }) => (
-    <TouchableOpacity
-      style={styles.messageItem}
-      activeOpacity={0.7}
-      onPress={() => handleMessagePress(item)}
-    >
-      <View style={styles.avatar}>
-        <Image
-          source={require("@/assets/images/account.png")}
-          style={styles.avatarImage}
-        />
-      </View>
-      <View style={styles.messageInfo}>
-        <View style={styles.messageHeader}>
-          <Text style={styles.messageName}>{item.name}</Text>
-          <Text style={styles.messageTime}>{item.time}</Text>
-        </View>
-        <View style={styles.messagePreview}>
-          <Text
-            style={[
-              styles.lastMessage,
-              item.unread > 0 && styles.unreadMessage,
-            ]}
-            numberOfLines={1}
-          >
-            {item.lastMessage}
-          </Text>
-          {item.unread > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{item.unread}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <Image
-            source={require("@/assets/images/FILTalktext.png")}
-            style={styles.headerLogo}
-          />
-          <TouchableOpacity style={styles.composeButton}>
-            <Image
-              source={require("@/assets/images/MessagesNewChatIcon.png")}
-              style={styles.composeIcon}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Image
-              source={require("@/assets/images/Search.png")}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search Conversation or People"
-              placeholderTextColor="#999"
-            />
-          </View>
-        </View>
-
-        {/* Online Contacts */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.onlineContactsContainer}
-          contentContainerStyle={styles.onlineContactsContent}
-        >
-          {onlineContacts.map((contact) => (
-            <TouchableOpacity
-              key={contact.id}
-              style={styles.onlineContact}
-              // ADDED THIS ONPRESS:
-              onPress={() =>
-                router.push({
-                  pathname: "/chat",
-                  params: { name: contact.name, id: contact.id },
-                } as Href)
-              }
-            >
-              <View style={styles.onlineAvatarContainer}>
-                <View style={styles.onlineAvatar}>
-                  <Image
-                    source={require("@/assets/images/account.png")}
-                    style={styles.onlineAvatarImage}
-                  />
-                </View>
-                <View style={styles.onlineIndicator} />
-              </View>
-              <Text style={styles.onlineContactName} numberOfLines={2}>
-                {contact.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Messages List */}
-        <FlatList
-          data={sampleMessages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        />
-      </SafeAreaView>
-    </TouchableWithoutFeedback>
-  );
+const resolveApiOrigin = (): string => {
+  const myComputerIp = "192.168.254.201";
+  const hostUri = Constants.expoConfig?.hostUri || Constants.hostUri;
+  if (typeof hostUri === "string" && hostUri.length > 0) {
+    const host = hostUri.split(":")[0];
+    return `http://${host}:8000`;
+  }
+  return Platform.OS === "android" || Platform.OS === "ios"
+    ? `http://${myComputerIp}:8000`
+    : "http://localhost:8000";
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    marginLeft: 10,
-  },
-  headerLogo: {
-    width: 130,
-    height: 44,
-    resizeMode: "contain",
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  searchIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#666",
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 22,
-    color: "#333",
-    fontFamily: Fonts.regular,
-  },
-  onlineContactsContainer: {
-    maxHeight: 130,
-    marginBottom: 10,
-  },
-  onlineContactsContent: {
-    paddingHorizontal: 20,
-    gap: 15,
-    paddingBottom: 40,
-  },
-  onlineContact: {
-    alignItems: "center",
-    width: 70,
-  },
-  onlineAvatarContainer: {
-    position: "relative",
-    marginBottom: 10,
-  },
-  onlineAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  onlineAvatarImage: {
-    width: 30,
-    height: 40,
-    tintColor: "#fff",
-  },
-  onlineIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#4CD964",
-    borderWidth: 2,
-    borderColor: "#F5F5F5",
-  },
-  onlineContactName: {
-    fontSize: 12,
-    color: "#333",
-    textAlign: "center",
-    fontFamily: Fonts.regular,
-  },
-  composeButton: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  composeIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: "contain",
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-  },
-  messageItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    backgroundColor: "#E8E8E8",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarImage: {
-    width: 26,
-    height: 34,
-    tintColor: "#666",
-  },
-  messageInfo: {
-    flex: 1,
-  },
-  messageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  messageName: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#000",
-    fontFamily: Fonts.regular,
-  },
-  messageTime: {
-    fontSize: 18,
-    color: "#999",
-    fontFamily: Fonts.regular,
-  },
-  messagePreview: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  lastMessage: {
-    fontSize: 16,
-    color: "#666",
-    flex: 1,
-    marginRight: 10,
-    fontFamily: Fonts.regular,
-  },
-  unreadMessage: {
-    fontWeight: "600",
-    color: "#000",
-    fontFamily: Fonts.regular,
-  },
-  unreadBadge: {
-    backgroundColor: "#f6ca15",
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  unreadCount: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#000",
-    fontFamily: Fonts.regular,
-  },
-});
+const API_BASE_URL = `${resolveApiOrigin()}/api`;
+const TOKEN_KEY = "auth_token";
 
-export default MessagesScreen;
+// ============ HELPERS ============
+
+export const getToken = async (): Promise<string | null> => {
+  try {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    // Sanitize: Remove any hidden quotes or newlines
+    return token ? token.replace(/["\n\r]/g, "").trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setToken = async (token: string): Promise<void> => {
+  await AsyncStorage.setItem(TOKEN_KEY, token);
+};
+
+export const removeToken = async (): Promise<void> => {
+  await AsyncStorage.removeItem(TOKEN_KEY);
+};
+
+// Force logout function to clear state and redirect
+const forceLogout = async () => {
+  console.warn("[AUTH] Session expired (401). Logging out...");
+  await removeToken();
+  router.replace("/login"); // Adjust this route to match your login screen path
+};
+
+const fetchWithAuth = async (
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<Response> => {
+  const publicRoutes = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/forgot-password-otp",
+    "/auth/verify-otp",
+    "/auth/reset-password-otp",
+  ];
+
+  const isPublicRoute = publicRoutes.some((route) =>
+    endpoint.startsWith(route),
+  );
+
+  let token = null;
+  if (!isPublicRoute) {
+    token = await getToken();
+  }
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, { ...options, headers });
+
+  // INTERCEPTOR: If 401 Unauthorized, automatically log out
+  if (response.status === 401 && !isPublicRoute) {
+    await forceLogout();
+    // Return a dummy response to prevent crashes before navigation happens
+    return new Response(JSON.stringify({ detail: "Session expired" }), {
+      status: 401,
+    });
+  }
+
+  return response;
+};
+
+// ============ INTERFACES ============
+
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+  phone_number?: string;
+  active_status?: boolean;
+}
+
+export interface Contact {
+  id: number;
+  contact_id: number;
+  status: "pending" | "accepted" | "blocked";
+  contact: User;
+}
+
+export interface Conversation {
+  id: number;
+  type: "private" | "group";
+  group_name?: string;
+  updated_at: string;
+  participants: User[];
+  last_message?: {
+    content: string;
+    moderation_status: string;
+    created_at: string;
+    masked_words?: string[];
+  };
+}
+
+// ============ API MODULES ============
+
+export const authApi = {
+  register: async (data: any) => {
+    const response = await fetchWithAuth("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!response.ok)
+      throw new Error((await response.json()).detail || "Registration failed");
+    return response.json();
+  },
+  login: async (data: any) => {
+    const response = await fetchWithAuth("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!response.ok)
+      throw new Error((await response.json()).detail || "Login failed");
+    const result = await response.json();
+    if (result.access_token) await setToken(result.access_token);
+    return result;
+  },
+  logout: async () => {
+    await removeToken();
+  },
+};
+
+export const userApi = {
+  getById: async (id: number): Promise<User> => {
+    const response = await fetchWithAuth(`/users/${id}`);
+    if (!response.ok) throw new Error(`User load failed: ${response.status}`);
+    return response.json();
+  },
+  getCurrentUser: async (): Promise<User> => {
+    const response = await fetchWithAuth("/users/profile");
+    return response.json();
+  },
+  searchUsers: async (username: string): Promise<User[]> => {
+    const response = await fetchWithAuth(
+      `/users/search?username=${encodeURIComponent(username)}`,
+    );
+    return response.json();
+  },
+};
+
+export const contactsApi = {
+  getAll: (status?: string) => contactsApi.getContacts(status),
+
+  getContacts: async (status?: string): Promise<Contact[]> => {
+    const url = status
+      ? `/contacts/contact-list?status=${status}`
+      : "/contacts/contact-list";
+    const response = await fetchWithAuth(url);
+    if (!response.ok) {
+      // 401 is handled by interceptor, just return empty to prevent crash
+      return [];
+    }
+    return response.json();
+  },
+  addContact: async (contactId: number) => {
+    const response = await fetchWithAuth("/contacts/send_request", {
+      method: "POST",
+      body: JSON.stringify({ contact_id: contactId }),
+    });
+    return response.json();
+  },
+};
+
+export const conversationsApi = {
+  getAll: () => conversationsApi.getConversations(),
+
+  getConversations: async (): Promise<Conversation[]> => {
+    try {
+      const response = await fetchWithAuth("/conversations");
+      if (!response.ok) {
+        // 401 is handled by interceptor
+        return [];
+      }
+      return response.json();
+    } catch (err) {
+      console.error("[API] Network Error in getConversations", err);
+      return [];
+    }
+  },
+
+  getConversation: async (id: number): Promise<Conversation> => {
+    const response = await fetchWithAuth(`/conversations/${id}`);
+    if (!response.ok) throw new Error("Failed to fetch history");
+    return response.json();
+  },
+
+  createPrivateConversation: async (
+    receiverId: number,
+  ): Promise<Conversation> => {
+    const response = await fetchWithAuth("/conversations/private", {
+      method: "POST",
+      body: JSON.stringify({ receiver_id: receiverId }),
+    });
+    if (!response.ok) throw new Error("Could not start conversation");
+    return response.json();
+  },
+};
+
+export const messagesApi = {
+  sendMessage: async (
+    content: string,
+    conversationId?: number,
+    receiverId?: number,
+  ) => {
+    const response = await fetchWithAuth("/messages/send_message", {
+      method: "POST",
+      body: JSON.stringify({
+        content,
+        conversation_id: conversationId,
+        receiver_id: receiverId,
+      }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to send message");
+    }
+    return response.json();
+  },
+};
+
+export default {
+  auth: authApi,
+  user: userApi,
+  users: userApi,
+  contacts: contactsApi,
+  conversations: conversationsApi,
+  messages: messagesApi,
+};

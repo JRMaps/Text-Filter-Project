@@ -1,5 +1,5 @@
-import React from "react";
-import { useRouter, Href } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { useRouter, useLocalSearchParams, Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -9,45 +9,112 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import { useContact } from "@/context/ContactContext";
 import { Fonts } from "@/constants/theme";
+import api from "../services/api";
 
 const ContactProfileScreen = () => {
   const router = useRouter();
-  const { selectedContact } = useContact();
+  const params = useLocalSearchParams();
 
-  // If no contact is selected, go back
-  if (!selectedContact) {
+  // Get ID from navigation params
+  const contactId = params.id ? Number(params.id) : null;
+  const initialName = params.name as string;
+
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 1. Fetch Contact Details on Mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDetails = async () => {
+      if (!contactId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // FIXED: Uses api.users.getById (which we added to api.ts)
+        const data = await api.users.getById(contactId);
+        if (isMounted) {
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error("Failed to load contact profile", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [contactId]);
+
+  // 2. Handle "Message" Button Press
+  const handleMessage = async () => {
+    if (!contactId) return;
+
+    // FIX: Instead of calling a non-existent API, navigate with receiverId.
+    // The backend will create the chat automatically when the first message is sent.
+    router.push({
+      pathname: "/chat",
+      params: {
+        name: profile?.username || initialName || "Chat",
+        receiverId: contactId, // Passes the contact's ID to the ChatScreen
+      },
+    } as Href);
+  };
+
+  const profileItems = [
+    {
+      icon: require("@/assets/images/phoneIcon.png"),
+      label: "Call",
+      action: () => Alert.alert("Call", "Calling feature coming soon!"),
+    },
+    {
+      icon: require("@/assets/images/messageIcon.png"),
+      label: "Messages",
+      action: handleMessage,
+    },
+    {
+      icon: require("@/assets/images/videoIcon.png"),
+      label: "Video",
+      action: () => {},
+    },
+    {
+      icon: require("@/assets/images/emailIcon.png"),
+      label: "Email",
+      action: () => {},
+    },
+    {
+      icon: require("@/assets/images/moreIcon.png"),
+      label: "More",
+      action: () => {},
+    },
+  ];
+
+  if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No contact selected</Text>
-          <TouchableOpacity
-            style={styles.backButtonEmpty}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#0039a9" />
       </SafeAreaView>
     );
   }
 
-  const profileItems = [
-    { icon: require("@/assets/images/phoneIcon.png"), label: "Call" },
-    { icon: require("@/assets/images/messageIcon.png"), label: "Messages" },
-    { icon: require("@/assets/images/videoIcon.png"), label: "Video" },
-    { icon: require("@/assets/images/emailIcon.png"), label: "Email" },
-    { icon: require("@/assets/images/moreIcon.png"), label: "More" },
-  ];
+  const displayName = profile?.username || initialName || "Unknown";
+  const displayPhone = profile?.phone_number || "No phone number";
+  const displayEmail = profile?.email || "No email address";
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -58,7 +125,6 @@ const ContactProfileScreen = () => {
               style={styles.backIcon}
             />
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => router.push("/editContact" as Href)}
@@ -67,40 +133,33 @@ const ContactProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            {selectedContact.avatar ? (
-              <Image
-                source={{ uri: selectedContact.avatar }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Image
-                source={require("@/assets/images/account.png")}
-                style={styles.defaultAvatarIcon}
-              />
-            )}
+            <Image
+              source={require("@/assets/images/account.png")}
+              style={styles.defaultAvatarIcon}
+            />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{selectedContact.name}</Text>
-            {selectedContact.status && (
-              <Text
-                style={[
-                  styles.statusText,
-                  selectedContact.status === "Online" && styles.onlineStatus,
-                ]}
-              >
-                {selectedContact.lastSeen || selectedContact.status}
-              </Text>
-            )}
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text
+              style={[
+                styles.statusText,
+                profile?.active_status && styles.onlineStatus,
+              ]}
+            >
+              {profile?.active_status ? "Online" : "Offline"}
+            </Text>
           </View>
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.actionButtons}>
           {profileItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.actionButton}>
+            <TouchableOpacity
+              key={index}
+              style={styles.actionButton}
+              onPress={item.action}
+            >
               <View style={styles.actionIconContainer}>
                 <Image source={item.icon} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>{item.label}</Text>
@@ -109,16 +168,15 @@ const ContactProfileScreen = () => {
           ))}
         </View>
 
-        {/* Contact Details Card */}
         <View style={styles.detailsCard}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Mobile Number</Text>
-            <Text style={styles.detailValue}>{selectedContact.phone}</Text>
+            <Text style={styles.detailValue}>{displayPhone}</Text>
           </View>
           <View style={styles.detailDivider} />
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Email</Text>
-            <Text style={styles.detailValue}>{selectedContact.email}</Text>
+            <Text style={styles.detailValue}>{displayEmail}</Text>
           </View>
         </View>
       </ScrollView>
@@ -127,33 +185,7 @@ const ContactProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#666",
-    marginBottom: 20,
-    fontFamily: Fonts.regular,
-  },
-  backButtonEmpty: {
-    backgroundColor: "#f6ca15",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    fontFamily: Fonts.regular,
-  },
+  container: { flex: 1, backgroundColor: "#F5F5F5" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -162,14 +194,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 15,
   },
-  backButton: {
-    padding: 8,
-  },
-  backIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: "contain",
-  },
+  backButton: { padding: 8 },
+  backIcon: { width: 28, height: 28, resizeMode: "contain" },
   editButton: {
     backgroundColor: "#f6ca15",
     paddingHorizontal: 20,
@@ -200,22 +226,13 @@ const styles = StyleSheet.create({
     marginTop: -10,
     marginBottom: 40,
   },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
   defaultAvatarIcon: {
     width: 125,
     height: 125,
-    justifyContent: "center",
-    alignItems: "center",
     resizeMode: "contain",
     tintColor: "#FFF",
   },
-  profileInfo: {
-    alignItems: "center",
-  },
+  profileInfo: { alignItems: "center" },
   profileName: {
     fontSize: 52,
     fontWeight: "900",
@@ -232,9 +249,7 @@ const styles = StyleSheet.create({
     color: "#666",
     fontFamily: Fonts.regular,
   },
-  onlineStatus: {
-    color: "#4CAF50",
-  },
+  onlineStatus: { color: "#4CAF50" },
   actionButtons: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -242,10 +257,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginBottom: 10,
   },
-  actionButton: {
-    alignItems: "center",
-    flex: 1,
-  },
+  actionButton: { alignItems: "center", flex: 1 },
   actionIconContainer: {
     width: 64,
     height: 64,
@@ -254,17 +266,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  actionIcon: {
-    width: 32,
-    height: 32,
-    resizeMode: "contain",
-  },
+  actionIcon: { width: 32, height: 32, resizeMode: "contain" },
   actionLabel: {
     fontSize: 15,
     color: "#000",
@@ -277,16 +280,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 12,
     paddingVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  detailItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
+  detailItem: { paddingVertical: 12, paddingHorizontal: 16 },
   detailDivider: {
     height: 1,
     backgroundColor: "#E8E8E8",
@@ -299,11 +294,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: Fonts.regular,
   },
-  detailValue: {
-    fontSize: 18,
-    color: "#666",
-    fontFamily: Fonts.regular,
-  },
+  detailValue: { fontSize: 18, color: "#666", fontFamily: Fonts.regular },
 });
 
 export default ContactProfileScreen;

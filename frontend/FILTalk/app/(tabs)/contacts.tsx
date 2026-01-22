@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback } from "react";
-import { useRouter, Href } from "expo-router";
+import { useRouter, Href, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -17,8 +17,18 @@ import {
   GestureResponderEvent,
   LayoutChangeEvent,
 } from "react-native";
-import { useContact, ContactData } from "@/context/ContactContext";
 import { Fonts } from "@/constants/theme";
+import api from "../../services/api";
+
+// UI Data structure
+interface ContactData {
+  id: string;
+  name: string;
+  status: "Online" | "Offline";
+  lastSeen: string;
+  avatar?: string;
+  userId: string; // The backend User ID
+}
 
 type ContactSection = {
   title: string;
@@ -57,7 +67,9 @@ const ALPHABET = [
 
 const ContactsScreen = () => {
   const router = useRouter();
-  const { contacts, setSelectedContact } = useContact();
+
+  // State to hold real data
+  const [contacts, setContacts] = useState<ContactData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
@@ -66,9 +78,41 @@ const ContactsScreen = () => {
   const alphabetSidebarRef = useRef<View>(null);
   const sidebarLayout = useRef({ y: 0, height: 0 });
 
+  // FETCH CONTACTS FROM DB
+  useFocusEffect(
+    useCallback(() => {
+      const fetchContacts = async () => {
+        try {
+          // Fetch from backend using the new method
+          const response = await api.contacts.getAll();
+
+          if (response && Array.isArray(response)) {
+            // Map DB structure to UI structure
+            const mapped: ContactData[] = response.map((item: any) => ({
+              id: String(item.id), // Contact ID
+              userId: String(item.contact_id), // User ID of the friend
+              name: item.contact_user?.username || "Unknown",
+              status: item.contact_user?.active_status ? "Online" : "Offline",
+              lastSeen: item.contact_user?.active_status
+                ? "Online"
+                : "Last seen recently",
+            }));
+            setContacts(mapped);
+          }
+        } catch (error) {
+          console.error("Error fetching contacts:", error);
+        }
+      };
+      fetchContacts();
+    }, []),
+  );
+
   const handleContactPress = (contact: ContactData) => {
-    setSelectedContact(contact);
-    router.push("/contactProfile" as Href);
+    // Navigate to profile or chat
+    router.push({
+      pathname: "/contactProfile",
+      params: { id: contact.userId, name: contact.name },
+    } as Href);
   };
 
   // Filter contacts based on search query
