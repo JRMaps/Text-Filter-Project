@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, Depends
 from typing import List
-from backend.app.user.user_controller import search_user, view_user_profile
-from backend.app.user.user_schema import UserRead
+from backend.app.user.user_controller import search_user, view_user_profile, edit_user_profile
+from backend.app.user.user_schema import UserRead, UserUpdate
 from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
 
@@ -36,3 +36,12 @@ async def get_user_profile(
 ):
     """View a user's profile by user ID."""
     return view_user_profile(user_id)
+
+
+@router.put("/profile/edit", response_model=UserRead)
+async def update_user_profile(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Edit the current authenticated user's profile."""
+    return edit_user_profile(current_user.id, user_update)

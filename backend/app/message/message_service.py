@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.message.message_model import Message
+from backend.app.message.message_model import Message, ModerationStatus, DeliveryStatus as ModelDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
-from backend.app.message.message_schema import MessageRead, MessageStatus
+from backend.app.message.message_schema import MessageRead, MessageStatus, DeliveryStatus
 
 
 def get_db():
@@ -96,6 +96,7 @@ def send_message(sender_id: int, receiver_id: int, content: str):
     # 4. Severity Scoring
     # 5. Decision (allow / mask / block / flag)
     # ------------------------------------------------------- #
+
     
     db = SessionLocal()
     try:
@@ -131,7 +132,8 @@ def send_message(sender_id: int, receiver_id: int, content: str):
             receiver_id=receiver_id,
             raw_content=content,
             normalized_content=content,  # Will be set by CFG implementation
-            status=MessageStatus.allowed.value,  # Default status
+            moderation_status=ModerationStatus.ALLOWED,  # Default status
+            delivery_status=ModelDeliveryStatus.SENT,  # Initial delivery status
             severity_score=None,  # Will be set by CFG implementation
             matched_layers=None,  # Will be set by CFG implementation
             matched_rules=None,  # Will be set by CFG implementation
@@ -149,14 +151,30 @@ def send_message(sender_id: int, receiver_id: int, content: str):
         db.refresh(new_message)
         
         # Convert to MessageRead schema
+        # Map moderation_status enum to MessageStatus schema enum
+        moderation_status_map = {
+            ModerationStatus.ALLOWED: MessageStatus.allowed,
+            ModerationStatus.MASKED: MessageStatus.masked,
+            ModerationStatus.BLOCKED: MessageStatus.blocked,
+            ModerationStatus.FLAGGED: MessageStatus.flagged,
+        }
+        
+        # Map delivery_status enum to DeliveryStatus schema enum
+        delivery_status_map = {
+            ModelDeliveryStatus.SENT: DeliveryStatus.sent,
+            ModelDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
+            ModelDeliveryStatus.READ: DeliveryStatus.read,
+        }
+        
         return MessageRead(
             id=new_message.id,
             conversation_id=new_message.conversation_id,
             sender_id=new_message.sender_id,
             receiver_id=new_message.receiver_id,
-            content=new_message.raw_content,  # Map raw_content to content
-            status=MessageStatus(new_message.status),
-            created_at=new_message.timestamp  # Map timestamp to created_at
+            content=new_message.raw_content,
+            status=moderation_status_map.get(new_message.moderation_status, MessageStatus.allowed),
+            delivery_status=delivery_status_map.get(new_message.delivery_status, DeliveryStatus.sent),
+            created_at=new_message.timestamp 
         )
         
     except HTTPException:

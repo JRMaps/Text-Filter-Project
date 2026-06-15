@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
-from backend.app.message.message_controller import send_message
+from backend.app.message.message_service import send_message
 from backend.app.message.message_schema import MessageCreate, MessageRead
 from backend.app.user.user_model import User
 from backend.app.core.dependencies import get_current_user
 
 router = APIRouter()
 
-
-@router.post("/messages", response_model=MessageRead)
+# http endpoint to send message for ws fallback
+@router.post("/send_message", response_model=MessageRead)
 async def api_send_message(
     request: MessageCreate,
     current_user: User = Depends(get_current_user)

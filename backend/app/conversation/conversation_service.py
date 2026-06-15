@@ -3,11 +3,12 @@ from fastapi import HTTPException, status
 from typing import List
 from backend.app.database.database import SessionLocal
 from backend.app.user.user_model import User
-from backend.app.message.message_model import Message
+from backend.app.message.message_model import Message, ModerationStatus, DeliveryStatus as ModelDeliveryStatus
 from backend.app.conversation.conversation_model import Conversation, conversation_participants
 from backend.app.conversation.conversation_schema import ConversationDashboardItem, ConversationWithMessages
-from backend.app.message.message_schema import MessageRead, MessageStatus
+from backend.app.message.message_schema import MessageRead, MessageStatus, DeliveryStatus
 from backend.app.user.user_schema import UserRead
+from backend.app.conversation.conversation_schema import ConversationType
 
 
 def get_db():
@@ -53,36 +54,49 @@ def get_all_conversations(current_user_id: int) -> List[ConversationDashboardIte
         dashboard = []
         
         for convo in conversations:
-            # Get the other user (not the current user)
-            other_user = next(
-                (p for p in convo.participants if p.id != current_user_id),
-                None
-            )
-            
-            if not other_user:
-                continue  # Skip if no other user found (shouldn't happen)
-            
-            # Get last message if exists
-            last_message_content = None
-            if convo.last_message_id:
-                last_message = db.query(Message).filter(
-                    Message.id == convo.last_message_id
-                ).first()
-                if last_message:
-                    last_message_content = last_message.raw_content
-            
-            dashboard.append(ConversationDashboardItem(
-                id=convo.id,
-                participants=[p.id for p in convo.participants],
-                last_message_id=convo.last_message_id,
-                updated_at=convo.updated_at,
-                other_user=UserRead(
-                    id=other_user.id,
-                    username=other_user.username,
-                    email=other_user.email
-                ),
-                last_message=last_message_content
-            ))
+            if convo.type == ConversationType.PRIVATE:
+                # Process private conversation
+                # Get the other user (not the current user)
+                other_user = next(
+                    (p for p in convo.participants if p.id != current_user_id),
+                    None
+                )
+                
+                if not other_user:
+                    continue  # Skip if no other user found (shouldn't happen)
+                
+                # Get last message if exists
+                last_message_content = None
+                if convo.last_message_id:
+                    last_message = db.query(Message).filter(
+                        Message.id == convo.last_message_id
+                    ).first()
+                    if last_message:
+                        last_message_content = last_message.raw_content
+                
+                dashboard.append(ConversationDashboardItem(
+                    id=convo.id,
+                    type=ConversationType.PRIVATE,
+                    updated_at=convo.updated_at,
+                    last_message=last_message_content
+                ))
+            elif convo.type == ConversationType.GROUP:
+                # Process group conversation
+                # Get last message if exists
+                last_message_content = None
+                if convo.last_message_id:
+                    last_message = db.query(Message).filter(
+                        Message.id == convo.last_message_id
+                    ).first()
+                    if last_message:
+                        last_message_content = last_message.raw_content
+                
+                dashboard.append(ConversationDashboardItem(
+                    id=convo.id,
+                    type=ConversationType.GROUP,
+                    updated_at=convo.updated_at,
+                    last_message=last_message_content
+                ))
         
         # Sort by updated_at, newest first
         dashboard.sort(key=lambda x: x.updated_at if x.updated_at else datetime.min, reverse=True)
@@ -138,6 +152,21 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
             Message.conversation_id == conversation_id
         ).order_by(Message.timestamp.asc()).all()
         
+        # Map moderation_status enum to MessageStatus schema enum
+        moderation_status_map = {
+            ModerationStatus.ALLOWED: MessageStatus.allowed,
+            ModerationStatus.MASKED: MessageStatus.masked,
+            ModerationStatus.BLOCKED: MessageStatus.blocked,
+            ModerationStatus.FLAGGED: MessageStatus.flagged,
+        }
+        
+        # Map delivery_status enum to DeliveryStatus schema enum
+        delivery_status_map = {
+            ModelDeliveryStatus.SENT: DeliveryStatus.sent,
+            ModelDeliveryStatus.DELIVERED: DeliveryStatus.delivered,
+            ModelDeliveryStatus.READ: DeliveryStatus.read,
+        }
+        
         # Convert messages to MessageRead schema
         message_reads = [
             MessageRead(
@@ -146,7 +175,8 @@ def get_conversation_by_id(conversation_id: int, current_user_id: int) -> Conver
                 sender_id=msg.sender_id,
                 receiver_id=msg.receiver_id,
                 content=msg.raw_content,  # Map raw_content to content
-                status=MessageStatus(msg.status),
+                status=moderation_status_map.get(msg.moderation_status, MessageStatus.allowed),
+                delivery_status=delivery_status_map.get(msg.delivery_status, DeliveryStatus.sent),
                 created_at=msg.timestamp  # Map timestamp to created_at
             )
             for msg in messages
