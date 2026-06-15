@@ -25,7 +25,6 @@ def normalization(text: str) -> str: #main funct to normalize text
     return noExtraSpaces.strip()
 
 
-# Test code (commented out for production)
-# string = "H3ll0, Wörld! Th1s 1s @ t3st str1ng w1th s0me nümber5 & punctu@t10n. put@ng 1n@ m0"
-# normalized_string = normalization(string)
-# print(normalized_string)  # Output: "hello world this is a test string with some numbers punctuation
+string = "H3ll0, Wörld! Th1s 1s @ t3st str1ng w1th s0me nümber5 & punctu@t10n. put@ng 1n@ m0"
+normalized_string = normalization(string)
+print(normalized_string)  # Output: "hello world this is a test string with some numbers punctuation

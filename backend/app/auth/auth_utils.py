@@ -1,55 +1,55 @@
+import hashlib
+import logging
 import os
+import secrets
+import smtplib
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Tuple
+from email.message import EmailMessage
+from typing import Optional
+from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
-from backend.app.database.database import SessionLocal
+from sqlalchemy.orm import Session
 from backend.app.user.user_model import User
-from email.message import EmailMessage
-import os
-import smtplib
-import hashlib
-import secrets
-from collections import defaultdict
-from threading import Lock
 
-# Password hashing context
+logger = logging.getLogger(__name__)
+
+# Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY")
+# JWT config
+SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
+# OTP config
+OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+# ----------------------
+# Password utils
+# ----------------------
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
     return pwd_context.hash(password)
 
-
+# ----------------------
+# JWT utils
+# ----------------------
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
+    """Create JWT access token storing only the user_id"""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def verify_token(token: str) -> dict:
-    """Verify and decode a JWT token."""
+    """Verify JWT and return payload"""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,37 +57,28 @@ def verify_token(token: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
-def get_user_by_email(email: str) -> Optional[User]:
-    """Get a user by email from the database."""
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.email == email).first()
-        return user
-    finally:
-        db.close()
-
-
-def get_user_by_id(user_id: int) -> Optional[User]:
-    """Get a user by ID from the database."""
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        return user
-    finally:
-        db.close()
+# ----------------------
+# User fetch utils
+# ----------------------
+def get_user_by_email_or_phone(db: Session, credential: str) -> Optional[User]:
+    """
+    Fetch user by email OR phone number.
+    """
+    return db.query(User).filter(
+        (User.email == credential) | (User.phone_number == credential)
+    ).first()
 
 
-def get_user_by_username(username: str) -> Optional[User]:
-    """Get a user by username from the database."""
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.username == username).first()
-        return user
-    finally:
-        db.close()
+def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()
 
-# For OTP generation and hashing purposes
+
+def get_user_by_username(db: Session, username: str) -> Optional[User]:
+    return db.query(User).filter(User.username == username).first()
+
+# ----------------------
+# OTP utils
+# ----------------------
 def generate_otp() -> str:
     return f"{secrets.randbelow(1_000_000):06}"
 
@@ -95,7 +86,10 @@ def generate_otp() -> str:
 def hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode()).hexdigest()
 
-# For OTP notification purposes
+
+# ----------------------
+# OTP sending utils
+# ----------------------
 def send_otp_via_email(to_email: str, otp: str) -> None:
     """
     Sends OTP via email.
@@ -165,47 +159,3 @@ def send_otp_via_phone(phone_number: str, otp: str) -> None:
         print("Note: Install twilio package (pip install twilio) and configure credentials for production SMS")
     except Exception as e:
         print(f"SMS sending failed: {e}")
-
-
-# Rate limiting storage (in-memory, can be upgraded to Redis for production)
-_rate_limit_store: Dict[str, list] = defaultdict(list)
-_rate_limit_lock = Lock()
-
-# OTP Configuration
-OTP_EXPIRY_MINUTES = 10
-OTP_MAX_RETRY_ATTEMPTS = 5
-OTP_RESEND_COOLDOWN_SECONDS = 60 
-RATE_LIMIT_MAX_REQUESTS = 5  
-RATE_LIMIT_WINDOW_MINUTES = 15 
-
-
-def check_rate_limit(identifier: str) -> Tuple[bool, Optional[int]]:
-    """
-    Check if identifier has exceeded rate limit.
-    Returns (is_allowed, seconds_until_reset)
-    """
-    with _rate_limit_lock:
-        now = datetime.utcnow()
-        window_start = now - timedelta(minutes=RATE_LIMIT_WINDOW_MINUTES)
-        
-        # Clean old entries
-        _rate_limit_store[identifier] = [
-            timestamp for timestamp in _rate_limit_store[identifier]
-            if timestamp > window_start
-        ]
-        
-        # Check if limit exceeded
-        if len(_rate_limit_store[identifier]) >= RATE_LIMIT_MAX_REQUESTS:
-            # Calculate seconds until oldest request expires
-            oldest_request = min(_rate_limit_store[identifier])
-            reset_time = oldest_request + timedelta(minutes=RATE_LIMIT_WINDOW_MINUTES)
-            seconds_until_reset = int((reset_time - now).total_seconds())
-            return False, max(0, seconds_until_reset)
-        
-        return True, None
-
-
-def record_rate_limit_request(identifier: str) -> None:
-    """Record a rate limit request for the identifier."""
-    with _rate_limit_lock:
-        _rate_limit_store[identifier].append(datetime.utcnow())

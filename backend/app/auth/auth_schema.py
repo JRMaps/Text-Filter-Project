@@ -9,8 +9,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
 
-# For forgot password func: OTP requests and verification
-class ForgotPasswordOTPRequest(BaseModel):
+class ForgotPasswordRequest(BaseModel):
     identifier: str 
 
 class VerifyOTPRequest(BaseModel):

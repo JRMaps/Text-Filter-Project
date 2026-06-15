@@ -1,13 +1,15 @@
-from pydantic import BaseModel, model_validator, ValidationError
-from typing import List, Optional
+from pydantic import BaseModel, model_validator, Field
+from typing import List, Optional, Annotated, Union, Literal
 from datetime import datetime
 from backend.app.message.message_schema import MessageRead
 from backend.app.user.user_schema import UserRead 
 from enum import Enum
+from backend.app.message.message_model import ModerationStatus
 
 class ConversationType(str, Enum):
     PRIVATE = "private"
     GROUP = "group"
+
 
 class ConversationBase(BaseModel):
     participants: List[int]
@@ -26,9 +28,21 @@ class ConversationBase(BaseModel):
 
         return self
 
+
+class ConversationParticipantRead(BaseModel):
+    id: int
+    username: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class ConversationRead(BaseModel):
     id: int
-    participants: List[int]
+
+    participants: List[ConversationParticipantRead]
+
     group_name: Optional[str]
     last_message_id: Optional[int]
     updated_at: datetime
@@ -37,22 +51,72 @@ class ConversationRead(BaseModel):
         "from_attributes": True
     }
 
+
 class ConversationWithMessages(ConversationRead):
     messages: List[MessageRead]
 
-class ConversationDashboardItem(BaseModel):
-    id: int
-    type: ConversationType
-    updated_at: datetime
-    last_message: Optional[str]
+
+class LastMessage(BaseModel):
+    content: Optional[str]
+    moderation_status: Optional[ModerationStatus]
+    masked_words: Optional[List[str]]
 
     model_config = {
         "from_attributes": True
     }
 
+
+class ConversationDashboardItem(BaseModel):
+    id: int
+    type: ConversationType
+    updated_at: datetime
+    last_message: Optional[LastMessage]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class PrivateConversationDashboardItem(ConversationDashboardItem):
-    other_user: UserRead
+    type: Literal[ConversationType.PRIVATE]
+    other_user: ConversationParticipantRead
+
 
 class GroupConversationDashboardItem(ConversationDashboardItem):
-    group_name: str
+    type: Literal[ConversationType.GROUP]
+    group_name: Optional[str]
     member_count: int
+    participants: List[ConversationParticipantRead]
+
+
+class GroupConversationCreateRequest(BaseModel):
+    participant_ids: List[int] = Field(..., min_items=1, description="List of participant IDs (excluding creator)")
+    group_name: Optional[str] = Field(None, description="Name of the group chat")
+
+    @model_validator(mode="after")
+    def validate_participants(self):
+        if len(set(self.participant_ids)) < 2:
+            raise ValueError("A group chat must have at least 2 unique participants (excluding the creator).")
+        return self
+
+
+class GroupConversationCreateResponse(BaseModel):
+    id: int
+    group_name: Optional[str]
+    created_by: int
+    type: ConversationType
+    created_at: datetime
+    participants: List[ConversationParticipantRead]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+ConversationDashboardResponse = Annotated[
+    Union[
+        PrivateConversationDashboardItem,
+        GroupConversationDashboardItem
+    ],
+    Field(discriminator="type")
+]
